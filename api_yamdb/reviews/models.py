@@ -72,6 +72,7 @@ class Review(models.Model):
     title = models.ForeignKey(Title, on_delete=models.CASCADE)
     text = models.TextField()
     author = models.ForeignKey(User, on_delete=models.CASCADE)
+
     score = models.PositiveSmallIntegerField(
         validators=score_rating_range_validators
     )

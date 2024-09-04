@@ -22,6 +22,7 @@ class Migration(migrations.Migration):
                 ('name', models.CharField(max_length=256)),
                 ('slug', models.SlugField(unique=True)),
             ],
+
             options={
                 'ordering': ('slug',),
             },
@@ -67,5 +68,6 @@ class Migration(migrations.Migration):
             options={
                 'default_related_name': 'reviews',
             },
+
         ),
     ]
