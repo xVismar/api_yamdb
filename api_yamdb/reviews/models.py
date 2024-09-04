@@ -41,34 +41,42 @@ class Title(models.Model):
 
     name = models.CharField(max_length=256)
     year = models.PositiveSmallIntegerField()
-    description = models.TextField()
-    genre = models.ManyToManyField(
-        Genre, related_name='titles'
+    description = models.TextField(blank=True, null=True)
+    genre = models.ForeignKey(
+        Genre,
+        on_delete=models.SET_NULL,
+        null=True
     )
-    category = models.ManyToManyField(
-        Category, related_name='titles'
+    category = models.ForeignKey(
+        Category,
+        on_delete=models.SET_NULL,
+        null=True,
     )
     rating = models.PositiveSmallIntegerField(
-        default=None, validators=score_rating_range_validators
+        validators=score_rating_range_validators,
+        blank=True,
+        null=True
     )
 
     class Meta:
         """Класс с метаданными модели произведения."""
 
+        default_related_name = 'titles'
+        verbose_name = 'Произведения'
         ordering = ('name', 'year')
 
 
 class Review(models.Model):
     """Модель отзыва."""
 
-    title = models.ForeignKey(
-        Title, on_delete=models.CASCADE, related_name='reviews'
-    )
+    title = models.ForeignKey(Title, on_delete=models.CASCADE)
     text = models.TextField()
-    author = models.ForeignKey(
-        User, on_delete=models.CASCADE, related_name='reviews'
-    )
+    author = models.ForeignKey(User, on_delete=models.CASCADE)
+
     score = models.PositiveSmallIntegerField(
         validators=score_rating_range_validators
     )
     pub_date = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        default_related_name = 'reviews'
