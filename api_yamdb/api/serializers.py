@@ -1,8 +1,7 @@
-"""Модуль с сериализаторами приложения api."""
-
 from rest_framework import serializers
+from rest_framework.relations import SlugRelatedField
 
-from reviews.models import Category, Genre, Review, Title
+from reviews.models import Category, Genre, Review, Title, Comment
 
 
 class GenreSerializer(serializers.ModelSerializer):
@@ -11,8 +10,9 @@ class GenreSerializer(serializers.ModelSerializer):
     class Meta:
         """Класс с метаданными модели жанра."""
 
-        fields = '__all__'
         model = Genre
+        fields = '__all__'
+        read_only_fields = ('id',)
 
 
 class CategorySerializer(serializers.ModelSerializer):
@@ -21,27 +21,63 @@ class CategorySerializer(serializers.ModelSerializer):
     class Meta:
         """Класс с метаданными модели категории."""
 
-        fields = '__all__'
         model = Category
+        fields = '__all__'
+        read_only_fields = ('id',)
 
 
 class TitleSerializer(serializers.ModelSerializer):
     """Сериализатор произведения."""
 
+    genre = serializers.SlugRelatedField(
+        slug_field='slug',
+        queryset=Genre.objects.all(),
+        many=True
+    )
+    category = serializers.SlugRelatedField(
+        slug_field='slug',
+        queryset=Category.objects.all()
+    )
+
     class Meta:
         """Класс с метаданными модели произведения."""
 
-        fields = '__all__'
         model = Title
+        fields = (
+            'id',
+            'name',
+            'year',
+            'rating',
+            'description',
+            'genre',
+            'category'
+        )
+        read_only_fields = (
+            'id',
+            'rating'
+        )
 
 
 class ReviewSerializer(serializers.ModelSerializer):
     """Сериализатор отзыва."""
 
-    ...
+    author = SlugRelatedField(slug_field='username', read_only=True)
 
     class Meta:
         """Класс с метаданными модели отзыва."""
 
-        fields = '__all__'
         model = Review
+        fields = '__all__'
+
+
+class CommentSerializer(serializers.ModelSerializer):
+    """Сериализатор комментария."""
+
+    author = SlugRelatedField(slug_field='username', read_only=True)
+
+    class Meta:
+        """Класс с метаданными модели комментария."""
+
+        model = Comment
+        fields = '__all__'
+        read_only_fields = ('review',)

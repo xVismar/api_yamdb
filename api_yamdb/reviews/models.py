@@ -42,11 +42,7 @@ class Title(models.Model):
     name = models.CharField(max_length=256)
     year = models.PositiveSmallIntegerField()
     description = models.TextField(blank=True, null=True)
-    genre = models.ForeignKey(
-        Genre,
-        on_delete=models.SET_NULL,
-        null=True
-    )
+    genre = models.ManyToManyField(Genre)
     category = models.ForeignKey(
         Category,
         to_field='slug',
@@ -80,4 +76,20 @@ class Review(models.Model):
     pub_date = models.DateTimeField(auto_now_add=True)
 
     class Meta:
+        """Класс с метаданными модели отзыва."""
+        
         default_related_name = 'reviews'
+
+
+class Comment(models.Model):
+    """Модель комментария."""
+
+    review = models.ForeignKey(Review, on_delete=models.CASCADE)
+    text = models.TextField()
+    author = models.ForeignKey(User, on_delete=models.CASCADE)
+    pubdate = models.DateTimeField()
+
+    class Meta:
+        """Класс с метаданными модели комментария."""
+
+        default_related_name = 'comments'

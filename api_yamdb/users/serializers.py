@@ -1,8 +1,19 @@
 from django.contrib.auth.tokens import default_token_generator
 from rest_framework import serializers
 from rest_framework.exceptions import NotFound
-from users.validators import validate
-from users.models import User
+from users.validators import user_validate
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
+
+
+class UserBaseSerializer(serializers.ModelSerializer):
+
+    def validate(self, attrs):
+        user_validate(self, attrs)
+        return super().validate(attrs)
+
+
 
 
 class ObtainJWTSerializer(serializers.Serializer):
@@ -14,16 +25,13 @@ class ObtainJWTSerializer(serializers.Serializer):
     def validate(self, attrs):
         username = attrs.get('username')
         confirmation_code = attrs.get('confirmation_code')
-
         if not username or not confirmation_code:
             raise serializers.ValidationError(
                 "Заполните все обязательные поля."
             )
-
         user = User.objects.filter(username=username)
         if not user:
             raise NotFound("Пользователь не найден.")
-        user = user.first()
         confirmation_code_check = default_token_generator.check_token(
             user, token=confirmation_code
         )
@@ -33,7 +41,7 @@ class ObtainJWTSerializer(serializers.Serializer):
         return attrs
 
 
-class UserMeSerializer(serializers.ModelSerializer):
+class UserMeSerializer(UserBaseSerializer):
 
     class Meta:
         model = User
@@ -48,12 +56,9 @@ class UserMeSerializer(serializers.ModelSerializer):
         )
         read_only_fields = ('id', 'role')
 
-    def validate(self, data):
-        validate(self, data)
-        return super().validate(data)
 
 
-class UserSerializer(serializers.ModelSerializer):
+class UserSerializer(UserBaseSerializer):
 
     class Meta:
         model = User
@@ -70,16 +75,10 @@ class UserSerializer(serializers.ModelSerializer):
             'email': {'required': True},
         }
 
-    def validate(self, data):
-        validate(self, data)
-        return super().validate(data)
 
+class UserSignUpSerializer(UserBaseSerializer):
 
-class UserSignUpSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ('email', 'username')
 
-    def validate(self, data):
-        validate(self, data)
-        return super().validate(data)
