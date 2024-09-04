@@ -6,7 +6,7 @@ from users.models import User
 
 
 class ObtainJWTSerializer(serializers.Serializer):
-    """Сериалайзер для получения токена пользователем"""
+    """Сериалайзер для получения токена пользователем."""
 
     username = serializers.CharField(required=True)
     confirmation_code = serializers.CharField(required=True)

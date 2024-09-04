@@ -49,6 +49,7 @@ class Title(models.Model):
     )
     category = models.ForeignKey(
         Category,
+        to_field='slug',
         on_delete=models.SET_NULL,
         null=True,
     )
