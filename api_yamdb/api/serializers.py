@@ -57,8 +57,8 @@ class ReviewSerializer(serializers.ModelSerializer):
         """Класс с метаданными модели отзыва."""
 
         model = Review
-        fields = ('title', 'text', 'author', 'score', 'pub_date')
-        read_only_fields = ('author', 'pub_date', 'title')
+        fields = ('id', 'title', 'text', 'author', 'score', 'pub_date')
+        read_only_fields = ('author', 'pub_date', 'title', 'id')
 
     def validate(self, data):
         """Проверка на уникальность отзыва для пользователя и произведения."""
