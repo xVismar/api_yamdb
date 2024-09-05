@@ -35,7 +35,7 @@ class Genre(models.Model):
 class Category(models.Model):
     """Модель категории."""
 
-    name = models.CharField(max_length=256)
+    name = models.CharField(max_length=150)
     slug = models.SlugField(max_length=50, unique=True)
 
     class Meta:
@@ -43,24 +43,20 @@ class Category(models.Model):
 
         ordering = ('slug',)
 
+    def __str__(self):
+        return self.name
 
 class Title(models.Model):
     """Модель произведения."""
 
-    name = models.CharField(max_length=256)
+    name = models.CharField(max_length=150)
     year = models.PositiveSmallIntegerField(validators=[validate_year])
     description = models.TextField(blank=True, null=True)
     genre = models.ManyToManyField(Genre)
     category = models.ForeignKey(
         Category,
-        to_field='slug',
         on_delete=models.SET_NULL,
         null=True,
-    )
-    rating = models.PositiveSmallIntegerField(
-        validators=score_rating_range_validators,
-        blank=True,
-        null=True
     )
 
     class Meta:
@@ -68,7 +64,7 @@ class Title(models.Model):
 
         default_related_name = 'titles'
         verbose_name = 'Произведения'
-        ordering = ('name', 'year')
+        ordering = ('name',)
 
 
 class Review(models.Model):
@@ -86,7 +82,7 @@ class Review(models.Model):
         """Класс с метаданными модели отзыва."""
         ordering = ('-pub_date',)
         default_related_name = 'reviews'
-    
+
 
 
 

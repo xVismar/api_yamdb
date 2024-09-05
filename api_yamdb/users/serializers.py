@@ -9,9 +9,9 @@ User = get_user_model()
 
 class UserBaseSerializer(serializers.ModelSerializer):
 
-    def validate(self, attrs):
-        user_validate(attrs)
-        return super().validate(attrs)
+    def validate(self, data):
+        user_validate(data)
+        return super().validate(data)
 
 
 class ObtainJWTSerializer(serializers.Serializer):
@@ -80,5 +80,5 @@ class UserSignUpSerializer(UserBaseSerializer):
 
     class Meta:
         model = User
-        fields = ('email', 'username')
+        fields = ('email', 'username',)
 

@@ -9,7 +9,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 
 from django.contrib.auth import get_user_model
 
-from users.permissions import AdminOnlyPermission, IsAdminOrReadOnly, IsAdminOrSuperUser
+from users.permissions import AdminOnlyPermission, IsAdminOrReadOnly
 from users.serializers import (
     ObtainJWTSerializer, UserMeSerializer, UserSerializer, UserSignUpSerializer
 )

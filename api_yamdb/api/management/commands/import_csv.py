@@ -9,7 +9,7 @@ logging.basicConfig(
     level=logging.INFO, format=('%(asctime)s - %(levelname)s - %(message)s')
 )
 
-SERIES_NAME = {'category': 'category_id', 'author': 'author_id', 'title_id': 'id'}
+SERIES_NAME = {'category': 'category_id', 'author': 'author_id'}
 MODEL_TABLE = {
     'user': 'users_user',
     'title': 'reviews_title',

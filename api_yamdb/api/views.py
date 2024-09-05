@@ -18,13 +18,42 @@ from api.filters import TitleFilter
 from rest_framework import permissions
 from rest_framework.exceptions import NotFound, PermissionDenied
 from rest_framework.exceptions import ValidationError
-
+from django.db.models import Avg
 
 class GenreViewSet(viewsets.ModelViewSet):
     """Представление жанра."""
 
     serializer_class = GenreSerializer
     queryset = Genre.objects.all()
+    permission_classes = (per.IsAdminOrReadOnly,)
+    filter_backends = (filters.SearchFilter,)
+    search_fields = ('name',)
+    lookup_field = 'slug'
+
+
+    def get_permissions(self):
+        return (
+            super().get_permissions()
+            if self.action not in {'list', 'retrieve'}
+            else (permissions.AllowAny(),)
+        )
+
+    def retrieve(self, request, *args, **kwargs):
+        if not request.user.is_staff:
+            return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
+        return super().retrieve(request, *args, **kwargs)
+
+    def partial_update(self, request, *args, **kwargs):
+        if not request.user.is_staff:
+            return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
+        return super().partial_update(request, *args, **kwargs)
+
+
+class CategoryViewSet(viewsets.ModelViewSet):
+    """Представление категории."""
+
+    serializer_class = CategorySerializer
+    queryset = Category.objects.all()
     permission_classes = (per.IsAdminOrReadOnly,)
     filter_backends = (filters.SearchFilter,)
     search_fields = ('name',)
@@ -37,12 +66,22 @@ class GenreViewSet(viewsets.ModelViewSet):
             else (permissions.AllowAny(),)
         )
 
+    def retrieve(self, request, *args, **kwargs):
+        if not request.user.is_staff:
+            return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
+        return super().retrieve(request, *args, **kwargs)
 
-class CategoryViewSet(viewsets.ModelViewSet):
-    """Представление категории."""
+    def partial_update(self, request, *args, **kwargs):
+        if not request.user.is_staff:
+            return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
+        return super().partial_update(request, *args, **kwargs)
 
-    serializer_class = CategorySerializer
-    queryset = Category.objects.all()
+
+class TitleViewSet(viewsets.ModelViewSet):
+    """Представление произведения."""
+
+    serializer_class = TitleSerializer
+    queryset = Title.objects.annotate(rating=Avg('reviews__score'))
     permission_classes = (per.IsAdminOrReadOnly,)
 
     def get_permissions(self):
@@ -51,68 +90,28 @@ class CategoryViewSet(viewsets.ModelViewSet):
             if self.action not in {'list', 'retrieve'}
             else (permissions.AllowAny(),)
         )
+    def create(self, request, *args, **kwargs):
+        """Создает новый объект Title и возвращает статус 201."""
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        headers = self.get_success_headers(serializer.data)
+        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+
+    def update(self, request, *args, **kwargs):
+        if not request.user.is_staff:
+            return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
+        return super().update(request, *args, **kwargs)
 
 
-class TitleViewSet(viewsets.ModelViewSet):
-    """Представление произведения."""
-
-    serializer_class = TitleSerializer
-    queryset = Title.objects.all()
-    permission_classes = (per.IsAdminOrReadOnly,)
-    filter_backends = (DjangoFilterBackend,)
-    filterset_class = TitleFilter
-
-    def get_queryset(self):
-        title_id = self.kwargs.get('title_id')
-        title = get_object_or_404(Title, id=title_id)
-        reviews = title.reviews.all()
-        comments = [review.comments.all() for review in reviews]
-        return comments
-
-    # def get_permissions(self):
-    #     return (
-    #         super().get_permissions()
-    #         if self.action not in {'list', 'retrieve'}
-    #         else (permissions.AllowAny(),)
-    #     )
+    def partial_update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
+        return Response(serializer.data)
 
 
-# class ReviewViewSet(viewsets.ModelViewSet):
-#     """Представление отзыва."""
-
-#     queryset = Review.objects.all()
-#     serializer_class = ReviewSerializer
-#     permission_classes = (IsAuthorOrModerator,)
-
-#     def get_permissions(self):
-#         return (
-#             super().get_permissions()
-#             if self.action not in {'list', 'retrieve'}
-#             else (permissions.AllowAny(),)
-#         )
-
-#     def get_queryset(self):
-#         """Переопределяет метод для фильтрации отзывов."""
-#         title = get_object_or_404(Title, id=self.kwargs.get('title_id'))
-#         return title.reviews.all()
-
-#     def perform_create(self, serializer):
-#         """Записывает в БД отзыв и его автора."""
-#         title = get_object_or_404(Title, id=self.kwargs.get('title_id'))
-#         if Review.objects.filter(title=title, author=self.request.user).exists():
-#             raise ValidationError('You have already reviewed this title.')
-#         serializer.save(author=self.request.user, title=title)
-
-#     def update(self, request, *args, **kwargs):
-#         """Отключает метод PUT."""
-#         raise MethodNotAllowed('PUT')
-
-#     def partial_update(self, request, *args, **kwargs):
-#         """Обрабатывает PATCH запросы."""
-#         review = self.get_object()
-#         if request.user != review.author and not request.user.is_staff:
-#             raise PermissionDenied('You do not have permission to edit this review.')
-#         return super().partial_update(request, *args, **kwargs)
 
 class ReviewViewSet(viewsets.ModelViewSet):
     """Представление отзыва."""
@@ -140,6 +139,9 @@ class ReviewViewSet(viewsets.ModelViewSet):
         serializer.save(
             author=self.request.user,
             title=self.get_title_or_404())
+
+    def update(self, request, *args, **kwargs):
+        return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
 
 
 class CommentViewSet(viewsets.ModelViewSet):
