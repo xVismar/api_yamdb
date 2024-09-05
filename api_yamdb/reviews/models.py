@@ -85,6 +85,12 @@ class Review(models.Model):
         """Класс с метаданными модели отзыва."""
         ordering = ('-pub_date',)
         default_related_name = 'reviews'
+        constraints = (
+            models.UniqueConstraint(
+                fields=('title', 'author'),
+                name='unique_title_author'
+            ),
+        )
 
 
 class Comment(models.Model):

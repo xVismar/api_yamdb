@@ -23,8 +23,23 @@ class CategorySerializer(serializers.ModelSerializer):
         exclude = ('id',)
 
 
-class TitleSerializer(serializers.ModelSerializer):
-    """Сериализатор произведения."""
+class TitleSafeSerializer(serializers.ModelSerializer):
+    """Сериализатор произведений под безопасные запросы."""
+
+    genre = GenreSerializer(read_only=True, many=True)
+    category = CategorySerializer(read_only=True)
+    rating = serializers.IntegerField(read_only=True)
+
+    class Meta:
+        """Класс с метаданными модели произведения."""
+
+        model = Title
+        fields = ('id', 'name', 'year', 'description',
+                  'genre', 'category', 'rating')
+
+
+class TitleUnsafeSerializer(serializers.ModelSerializer):
+    """Сериализатор произведений под небезопасные запросы."""
 
     genre = serializers.SlugRelatedField(
         many=True,
@@ -40,8 +55,7 @@ class TitleSerializer(serializers.ModelSerializer):
         """Класс с метаданными модели произведения."""
 
         model = Title
-        fields = ('id', 'name', 'year', 'genre', 'category', 'description')
-        read_only_fields = ('rating',)
+        fields = ('id', 'name', 'year', 'description', 'genre', 'category')
 
 
 class ReviewSerializer(serializers.ModelSerializer):
@@ -71,30 +85,6 @@ class ReviewSerializer(serializers.ModelSerializer):
         return data
 
 
-# class ReviewSerializer(serializers.ModelSerializer):
-#     """Сериализатор модели Review."""
-
-#     author = serializers.SlugRelatedField(
-#         read_only=True,
-#         slug_field='username',
-#     )
-
-#     class Meta:
-#         model = Review
-#         fields = ('id', 'text', 'author', 'score', 'pub_date')
-#         read_only_fields = ('author', 'pub_date')
-
-#     def validate(self, data):
-#         if self.context['request'].method != 'POST':
-#             return data
-#         if Review.objects.filter(
-#             title=self.context['view'].kwargs['title_id'],
-#             author=self.context['request'].user,
-#         ).exists():
-#             raise serializers.ValidationError('Вы уже оставили отзыв.')
-#         return data
-
-
 class CommentSerializer(serializers.ModelSerializer):
     """Сериализатор комментария."""
 
@@ -107,28 +97,3 @@ class CommentSerializer(serializers.ModelSerializer):
         model = Comment
         fields = '__all__'
         read_only_fields = ('review',)
-
-
-# class ReviewSerializer(serializers.ModelSerializer):
-#     """Сериализатор отзыва."""
-
-#     author = SlugRelatedField(slug_field='username', read_only=True)
-
-#     class Meta:
-#         """Класс с метаданными модели отзыва."""
-
-#         model = Review
-#         fields = '__all__'
-
-
-# class CommentSerializer(serializers.ModelSerializer):
-#     """Сериализатор комментария."""
-
-#     author = SlugRelatedField(slug_field='username', read_only=True)
-
-#     class Meta:
-#         """Класс с метаданными модели комментария."""
-
-#         model = Comment
-#         fields = '__all__'
-#         read_only_fields = ('review',)

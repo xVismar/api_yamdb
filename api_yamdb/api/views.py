@@ -7,7 +7,7 @@ from rest_framework.response import Response
 from rest_framework import status, permissions
 from rest_framework.exceptions import MethodNotAllowed
 from api.serializers import (
-    CategorySerializer, GenreSerializer, ReviewSerializer, TitleSerializer,
+    CategorySerializer, GenreSerializer, ReviewSerializer, TitleSafeSerializer, TitleUnsafeSerializer,
     CommentSerializer
 )
 import users.permissions as per
@@ -80,9 +80,13 @@ class CategoryViewSet(viewsets.ModelViewSet):
 class TitleViewSet(viewsets.ModelViewSet):
     """Представление произведения."""
 
-    serializer_class = TitleSerializer
     queryset = Title.objects.annotate(rating=Avg('reviews__score'))
     permission_classes = (per.IsAdminOrReadOnly,)
+
+    def get_serializer_class(self):
+        if self.request.method in permissions.SAFE_METHODS:
+            return TitleSafeSerializer
+        return TitleUnsafeSerializer
 
     def get_permissions(self):
         return (
