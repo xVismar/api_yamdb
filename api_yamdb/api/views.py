@@ -82,7 +82,7 @@ class TitleViewSet(viewsets.ModelViewSet):
 
     serializer_class = TitleSerializer
     queryset = Title.objects.annotate(rating=Avg('reviews__score'))
-    permission_classes = (per.IsAdminOrReadOnly,)
+    permission_classes = (per.AdminOnlyPermission,)
 
     def get_permissions(self):
         return (
@@ -90,26 +90,7 @@ class TitleViewSet(viewsets.ModelViewSet):
             if self.action not in {'list', 'retrieve'}
             else (permissions.AllowAny(),)
         )
-    def create(self, request, *args, **kwargs):
-        """Создает новый объект Title и возвращает статус 201."""
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        self.perform_create(serializer)
-        headers = self.get_success_headers(serializer.data)
-        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
-
-    def update(self, request, *args, **kwargs):
-        if not request.user.is_staff:
-            return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
-        return super().update(request, *args, **kwargs)
-
-
-    def partial_update(self, request, *args, **kwargs):
-        instance = self.get_object()
-        serializer = self.get_serializer(instance, data=request.data, partial=True)
-        serializer.is_valid(raise_exception=True)
-        self.perform_update(serializer)
-        return Response(serializer.data)
+    
 
 
 

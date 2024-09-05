@@ -14,6 +14,8 @@ score_rating_range_validators = (
     MaxValueValidator(10)
 )
 
+SLUG_FIELD_MAX_LENGHT = 50
+
 def validate_year(value):
     """Год выпуска не может быть больше текущего."""
     if value > datetime.now().year:
@@ -24,7 +26,7 @@ class Genre(models.Model):
     """Модель жанра."""
 
     name = models.CharField(max_length=256)
-    slug = models.SlugField(max_length=50, unique=True)
+    slug = models.SlugField(max_length=SLUG_FIELD_MAX_LENGHT, unique=True)
 
     class Meta:
         """Класс с метаданными модели жанра."""
@@ -36,7 +38,7 @@ class Category(models.Model):
     """Модель категории."""
 
     name = models.CharField(max_length=150)
-    slug = models.SlugField(max_length=50, unique=True)
+    slug = models.SlugField(max_length=SLUG_FIELD_MAX_LENGHT, unique=True)
 
     class Meta:
         """Класс с метаданными модели категории."""
@@ -64,7 +66,7 @@ class Title(models.Model):
 
         default_related_name = 'titles'
         verbose_name = 'Произведения'
-        ordering = ('name',)
+        ordering = ('name', 'year')
 
 
 class Review(models.Model):

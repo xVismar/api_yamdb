@@ -10,18 +10,21 @@ class GenreSerializer(serializers.ModelSerializer):
         """Класс с метаданными модели жанра."""
 
         model = Genre
-        fields = ('id', 'name', 'slug')
+        fields = ('name', 'slug')
 
 
 
 class CategorySerializer(serializers.ModelSerializer):
     """Сериализатор категории."""
 
+    # name =
+    # slug =
+
     class Meta:
         """Класс с метаданными модели категории."""
 
         model = Category
-        fields = ('id', 'name', 'slug')
+        fields = ('name', 'slug')
 
 class TitleSerializer(serializers.ModelSerializer):
     """Сериализатор произведения."""
@@ -31,14 +34,18 @@ class TitleSerializer(serializers.ModelSerializer):
         slug_field='slug',
         queryset=Genre.objects.all()
     )
-    category = CategorySerializer()
+    category = serializers.SlugRelatedField(
+        slug_field='name', queryset=Category.objects.all()
+    )
+
+
 
 
     class Meta:
         """Класс с метаданными модели произведения."""
 
         model = Title
-        fields = ('id', 'name', 'year', 'genre', 'category', 'description' )
+        fields = ('id', 'name', 'year', 'genre', 'category', 'description')
         read_only_fields = ('rating',)
 
 
