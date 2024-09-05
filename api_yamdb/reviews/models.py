@@ -3,6 +3,9 @@
 from django.contrib.auth import get_user_model
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
+from datetime import datetime
+from django.forms import ValidationError
+
 
 User = get_user_model()
 
@@ -10,6 +13,11 @@ score_rating_range_validators = (
     MinValueValidator(0),
     MaxValueValidator(10)
 )
+
+def validate_year(value):
+    """Год выпуска не может быть больше текущего."""
+    if value > datetime.now().year:
+        raise ValidationError(('Год выпуска не может быть больше текущего'), params={'value': value})
 
 
 class Genre(models.Model):
@@ -40,7 +48,7 @@ class Title(models.Model):
     """Модель произведения."""
 
     name = models.CharField(max_length=256)
-    year = models.PositiveSmallIntegerField()
+    year = models.PositiveSmallIntegerField(validators=[validate_year])
     description = models.TextField(blank=True, null=True)
     genre = models.ManyToManyField(Genre)
     category = models.ForeignKey(
@@ -69,7 +77,6 @@ class Review(models.Model):
     title = models.ForeignKey(Title, on_delete=models.CASCADE)
     text = models.TextField()
     author = models.ForeignKey(User, on_delete=models.CASCADE)
-
     score = models.PositiveSmallIntegerField(
         validators=score_rating_range_validators
     )
@@ -77,8 +84,11 @@ class Review(models.Model):
 
     class Meta:
         """Класс с метаданными модели отзыва."""
-        
+        ordering = ('-pub_date',)
         default_related_name = 'reviews'
+    
+
+
 
 
 class Comment(models.Model):
@@ -87,7 +97,7 @@ class Comment(models.Model):
     review = models.ForeignKey(Review, on_delete=models.CASCADE)
     text = models.TextField()
     author = models.ForeignKey(User, on_delete=models.CASCADE)
-    pubdate = models.DateTimeField()
+    pub_date = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         """Класс с метаданными модели комментария."""

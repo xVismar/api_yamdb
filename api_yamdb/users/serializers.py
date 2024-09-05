@@ -10,35 +10,35 @@ User = get_user_model()
 class UserBaseSerializer(serializers.ModelSerializer):
 
     def validate(self, attrs):
-        user_validate(self, attrs)
+        user_validate(attrs)
         return super().validate(attrs)
-
-
 
 
 class ObtainJWTSerializer(serializers.Serializer):
     """Сериалайзер для получения токена пользователем."""
 
-    username = serializers.CharField(required=True)
-    confirmation_code = serializers.CharField(required=True)
+    username = serializers.CharField()
+    confirmation_code = serializers.CharField()
 
-    def validate(self, attrs):
-        username = attrs.get('username')
-        confirmation_code = attrs.get('confirmation_code')
+    def validate(self, data):
+        username = data.get('username')
+        confirmation_code = data.get('confirmation_code')
         if not username or not confirmation_code:
             raise serializers.ValidationError(
                 "Заполните все обязательные поля."
             )
-        user = User.objects.filter(username=username)
-        if not user:
+        try:
+            user = User.objects.get(username=username)
+        except User.DoesNotExist:
             raise NotFound("Пользователь не найден.")
+
         confirmation_code_check = default_token_generator.check_token(
             user, token=confirmation_code
         )
         if not confirmation_code_check:
             raise serializers.ValidationError("Нет кода прав доступа.")
-        attrs['user'] = user
-        return attrs
+        data['user'] = user
+        return data
 
 
 class UserMeSerializer(UserBaseSerializer):

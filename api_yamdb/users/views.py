@@ -9,7 +9,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 
 from django.contrib.auth import get_user_model
 
-from users.permissions import AdminOnlyPermission
+from users.permissions import AdminOnlyPermission, IsAdminOrReadOnly, IsAdminOrSuperUser
 from users.serializers import (
     ObtainJWTSerializer, UserMeSerializer, UserSerializer, UserSignUpSerializer
 )
@@ -75,6 +75,23 @@ class UserViewSet(viewsets.ModelViewSet):
         serializer.save()
         return Response(serializer.data, status=status.HTTP_200_OK)
 
+
+# class ObtainJWTView(APIView):
+#     """Отправляет JWT токен в ответ на ПОСТ запрос с кодом."""
+
+#     permission_classes = (AllowAny,)
+#     authentication_classes = []
+
+#     def post(self, request, *args, **kwargs):
+#         serializer = ObtainJWTSerializer(data=request.data)
+#         serializer.is_valid(raise_exception=True)
+#         user = serializer.validated_data['user']
+
+#         if user is None:
+#             return Response({'detail': 'Invalid user.'}, status=status.HTTP_400_BAD_REQUEST)
+
+#         refresh = RefreshToken.for_user(user)
+#         return Response({'token': str(refresh.access_token)})
 
 class ObtainJWTView(APIView):
     """Отправляет JWT токен в ответ на ПОСТ запрос с кодом."""

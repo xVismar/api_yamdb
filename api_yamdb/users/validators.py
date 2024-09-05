@@ -2,7 +2,7 @@ import re
 from django.core.exceptions import ValidationError
 
 
-def user_validate(self, data):
+def user_validate(data):
     """Проверка username на соответствие шаблону."""
 
     username = data.get('username')
