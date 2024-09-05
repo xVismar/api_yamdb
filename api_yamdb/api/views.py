@@ -20,6 +20,7 @@ from rest_framework.exceptions import NotFound, PermissionDenied
 from rest_framework.exceptions import ValidationError
 from django.db.models import Avg
 
+
 class GenreViewSet(viewsets.ModelViewSet):
     """Представление жанра."""
 
@@ -29,7 +30,6 @@ class GenreViewSet(viewsets.ModelViewSet):
     filter_backends = (filters.SearchFilter,)
     search_fields = ('name',)
     lookup_field = 'slug'
-
 
     def get_permissions(self):
         return (
@@ -90,6 +90,7 @@ class TitleViewSet(viewsets.ModelViewSet):
             if self.action not in {'list', 'retrieve'}
             else (permissions.AllowAny(),)
         )
+
     def create(self, request, *args, **kwargs):
         """Создает новый объект Title и возвращает статус 201."""
         serializer = self.get_serializer(data=request.data)
@@ -103,14 +104,13 @@ class TitleViewSet(viewsets.ModelViewSet):
             return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
         return super().update(request, *args, **kwargs)
 
-
     def partial_update(self, request, *args, **kwargs):
         instance = self.get_object()
-        serializer = self.get_serializer(instance, data=request.data, partial=True)
+        serializer = self.get_serializer(
+            instance, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         self.perform_update(serializer)
         return Response(serializer.data)
-
 
 
 class ReviewViewSet(viewsets.ModelViewSet):
@@ -138,7 +138,8 @@ class ReviewViewSet(viewsets.ModelViewSet):
         """Записывает в БД отзыв и его автора."""
         serializer.save(
             author=self.request.user,
-            title=self.get_title_or_404())
+            title=self.get_title_or_404()
+        )
 
     def update(self, request, *args, **kwargs):
         return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)

@@ -14,10 +14,12 @@ score_rating_range_validators = (
     MaxValueValidator(10)
 )
 
+
 def validate_year(value):
     """Год выпуска не может быть больше текущего."""
     if value > datetime.now().year:
-        raise ValidationError(('Год выпуска не может быть больше текущего'), params={'value': value})
+        raise ValidationError(
+            ('Год выпуска не может быть больше текущего'), params={'value': value})
 
 
 class Genre(models.Model):
@@ -45,6 +47,7 @@ class Category(models.Model):
 
     def __str__(self):
         return self.name
+
 
 class Title(models.Model):
     """Модель произведения."""
@@ -82,9 +85,6 @@ class Review(models.Model):
         """Класс с метаданными модели отзыва."""
         ordering = ('-pub_date',)
         default_related_name = 'reviews'
-
-
-
 
 
 class Comment(models.Model):

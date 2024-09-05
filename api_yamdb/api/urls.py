@@ -13,8 +13,10 @@ router = DefaultRouter()
 router.register('genres', GenreViewSet)
 router.register('categories', CategoryViewSet)
 router.register(r'titles', TitleViewSet, basename='titles')
-router.register(r'titles/(?P<title_id>\d+)/reviews/', ReviewViewSet, basename='reviews')
-router.register(r'titles/(?P<title_id>\d+)/reviews/(?P<review_id>\d+)/comments', CommentViewSet, basename='comments')
+router.register(r'titles/(?P<title_id>\d+)/?reviews/?',
+                ReviewViewSet, basename='reviews')
+router.register(r'titles/(?P<title_id>\d+)/reviews/(?P<review_id>\d+)/?comments/?',
+                CommentViewSet, basename='comments')
 router.register('users', UserViewSet, basename='users')
 
 api_version_patterns = [
