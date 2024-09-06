@@ -6,12 +6,13 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
+from django.contrib.auth.hashers import make_password
 
 from django.contrib.auth import get_user_model
 
 from users.permissions import AdminOnlyPermission, IsAdminOrReadOnly
 from users.serializers import (
-    ObtainJWTSerializer, UserMeSerializer, UserSerializer, UserSignUpSerializer
+    ObtainJWTSerializer, UserMeSerializer, UserSerializer, SignupSerializer, 
 )
 
 User = get_user_model()
@@ -23,6 +24,12 @@ def user_signup_view(request):
     """Регистрация пользователя."""
     username = request.data.get('username')
     email = request.data.get('email')
+    if username == 'me':
+        return Response(
+            {'error': 'Username "me" is not allowed.'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
     user = User.objects.filter(email=email, username=username).first()
     if user is not None:
         confirmation_code = default_token_generator.make_token(user)
@@ -33,18 +40,17 @@ def user_signup_view(request):
             {'Оповещение': 'Письмо с кодом отправлено на почту.'},
             status=status.HTTP_200_OK,
         )
-    serializer = UserSignUpSerializer(data=request.data)
+    serializer = SignupSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
     username = serializer.validated_data['username']
     email = serializer.validated_data['email']
-    user = User.objects.create(username=username, email=email)
+    user = User.objects.create_user(username=username, email=email, password=make_password('default_password'))
     confirmation_code = default_token_generator.make_token(user)
     send_confirmation_code(email=email, confirmation_code=confirmation_code)
     return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 class UserViewSet(viewsets.ModelViewSet):
-
     queryset = User.objects.all()
     serializer_class = UserSerializer
     permission_classes = (AdminOnlyPermission,)
@@ -56,17 +62,17 @@ class UserViewSet(viewsets.ModelViewSet):
     @action(
         detail=False,
         permission_classes=(IsAuthenticated,),
-        serializer_class=UserMeSerializer,
+        serializer_class=UserSerializer,
     )
     def me(self, request):
-        """Обрабатывает GET запрос users/me."""
+        """Handles GET request to users/me."""
         user = request.user
         serializer = self.get_serializer(user)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     @me.mapping.patch
     def patch_me(self, request):
-        """Обрабатывает PATCH запрос users/me."""
+        """Handles PATCH request to users/me."""
         user = request.user
         serializer = self.get_serializer(
             user, data=request.data, partial=True
@@ -76,22 +82,6 @@ class UserViewSet(viewsets.ModelViewSet):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
-# class ObtainJWTView(APIView):
-#     """Отправляет JWT токен в ответ на ПОСТ запрос с кодом."""
-
-#     permission_classes = (AllowAny,)
-#     authentication_classes = []
-
-#     def post(self, request, *args, **kwargs):
-#         serializer = ObtainJWTSerializer(data=request.data)
-#         serializer.is_valid(raise_exception=True)
-#         user = serializer.validated_data['user']
-
-#         if user is None:
-#             return Response({'detail': 'Invalid user.'}, status=status.HTTP_400_BAD_REQUEST)
-
-#         refresh = RefreshToken.for_user(user)
-#         return Response({'token': str(refresh.access_token)})
 
 class ObtainJWTView(APIView):
     """Отправляет JWT токен в ответ на ПОСТ запрос с кодом."""

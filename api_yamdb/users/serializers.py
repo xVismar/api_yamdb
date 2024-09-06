@@ -9,9 +9,9 @@ User = get_user_model()
 
 class UserBaseSerializer(serializers.ModelSerializer):
 
-    def validate(self, data):
-        user_validate(data)
-        return super().validate(data)
+    def validate(self, attrs):
+        user_validate(attrs)
+        return super().validate(attrs)
 
 
 class ObtainJWTSerializer(serializers.Serializer):
@@ -54,8 +54,7 @@ class UserMeSerializer(UserBaseSerializer):
             'first_name',
             'last_name',
         )
-        read_only_fields = ('id', 'role')
-
+        read_only_fields = ('role',)
 
 
 class UserSerializer(UserBaseSerializer):
@@ -70,15 +69,22 @@ class UserSerializer(UserBaseSerializer):
             'first_name',
             'last_name',
         )
+        read_only_fields = ('role',)
         extra_kwargs = {
             'username': {'required': True},
             'email': {'required': True},
         }
 
+    def update(self, instance, validated_data):
+        request = self.context.get('request', None)
+        if request and request.user.role == 'user' and 'role' in validated_data:
+            validated_data.pop('role')
+        return super().update(instance, validated_data)
 
-class UserSignUpSerializer(UserBaseSerializer):
+
+class SignupSerializer(UserBaseSerializer):
 
     class Meta:
         model = User
-        fields = ('email', 'username',)
+        fields = ('username', 'email')
 

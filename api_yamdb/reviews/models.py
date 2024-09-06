@@ -5,6 +5,7 @@ from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from datetime import datetime
 from django.forms import ValidationError
+from django.core.validators import MaxLengthValidator
 
 
 User = get_user_model()
@@ -25,14 +26,14 @@ def validate_year(value):
 class Genre(models.Model):
     """Модель жанра."""
 
-    name = models.CharField(max_length=256)
+    name = models.CharField(max_length=150)
     slug = models.SlugField(max_length=SLUG_FIELD_MAX_LENGHT, unique=True)
 
     class Meta:
         """Класс с метаданными модели жанра."""
 
         ordering = ('slug',)
-
+        unique_together = ('name', 'slug')
 
 class Category(models.Model):
     """Модель категории."""
@@ -44,6 +45,7 @@ class Category(models.Model):
         """Класс с метаданными модели категории."""
 
         ordering = ('slug',)
+        unique_together = ('name', 'slug')
 
     def __str__(self):
         return self.name
@@ -51,7 +53,7 @@ class Category(models.Model):
 class Title(models.Model):
     """Модель произведения."""
 
-    name = models.CharField(max_length=150)
+    name = models.CharField(max_length=256, validators=[MaxLengthValidator(256)])
     year = models.PositiveSmallIntegerField(validators=[validate_year])
     description = models.TextField(blank=True, null=True)
     genre = models.ManyToManyField(Genre)
@@ -67,7 +69,11 @@ class Title(models.Model):
         default_related_name = 'titles'
         verbose_name = 'Произведения'
         ordering = ('name', 'year')
+        unique_together = ('name', 'category')
 
+    @property
+    def rating(self):
+        return self.reviews.aggregate(models.Avg('score'))['score__avg']
 
 class Review(models.Model):
     """Модель отзыва."""
@@ -84,8 +90,12 @@ class Review(models.Model):
         """Класс с метаданными модели отзыва."""
         ordering = ('-pub_date',)
         default_related_name = 'reviews'
-
-
+        constraints = (
+            models.UniqueConstraint(
+                fields=('title', 'author'),
+                name='unique_title_author'
+            ),
+        )
 
 
 

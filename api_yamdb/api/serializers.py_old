@@ -13,7 +13,6 @@ class GenreSerializer(serializers.ModelSerializer):
         fields = ('name', 'slug')
 
 
-
 class CategorySerializer(serializers.ModelSerializer):
     """Сериализатор категории."""
 
@@ -24,24 +23,8 @@ class CategorySerializer(serializers.ModelSerializer):
         fields = ('name', 'slug')
 
 
-
-class TitleSafeSerializer(serializers.ModelSerializer):
-    """Сериализатор произведений под безопасные запросы."""
-
-    genre = GenreSerializer(read_only=True, many=True)
-    category = CategorySerializer(read_only=True)
-    rating = serializers.IntegerField(read_only=True)
-
-    class Meta:
-        """Класс с метаданными модели произведения."""
-
-        model = Title
-        fields = ('id', 'name', 'year', 'description',
-                  'genre', 'category', 'rating')
-
-
-class TitleUnsafeSerializer(serializers.ModelSerializer):
-    """Сериализатор произведений под небезопасные запросы."""
+class TitleSerializer(serializers.ModelSerializer):
+    """Сериализатор произведения."""
 
     genre = serializers.SlugRelatedField(
         many=True,
@@ -57,7 +40,8 @@ class TitleUnsafeSerializer(serializers.ModelSerializer):
         """Класс с метаданными модели произведения."""
 
         model = Title
-        fields = ('id', 'name', 'year', 'description', 'genre', 'category')
+        fields = ('id', 'name', 'year', 'genre', 'category', 'description')
+        read_only_fields = ('rating',)
 
 
 class ReviewSerializer(serializers.ModelSerializer):
@@ -97,5 +81,6 @@ class CommentSerializer(serializers.ModelSerializer):
         """Класс с метаданными модели комментария."""
 
         model = Comment
-        fields = '__all__'
+        fields = ('id', 'author', 'title', 'review', 'text', 'pub_date')
         read_only_fields = ('review',)
+

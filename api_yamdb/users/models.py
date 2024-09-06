@@ -2,6 +2,7 @@ from django.contrib.auth.models import AbstractUser
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
+MAX_FIELD_LENGHT = 150
 
 class User(AbstractUser):
 
@@ -11,23 +12,23 @@ class User(AbstractUser):
         MODERATOR = 'moderator', _('Moderator')
 
     username = models.CharField(
-        max_length=35,
+        max_length=MAX_FIELD_LENGHT,
         unique=True,
         verbose_name='Имя пользователя'
     )
     email = models.EmailField(
-        max_length=35,
+        max_length=254,
         unique=True,
         verbose_name='Электронная почта'
     )
     first_name = models.CharField(
-        max_length=35,
+        max_length=MAX_FIELD_LENGHT,
         blank=True,
         null=True,
         verbose_name='Имя'
     )
     last_name = models.CharField(
-        max_length=35,
+        max_length=MAX_FIELD_LENGHT,
         blank=True,
         null=True,
         verbose_name='Фамилия'
@@ -38,9 +39,11 @@ class User(AbstractUser):
         verbose_name='О себе'
     )
     role = models.CharField(
-        max_length=10,
+        max_length=30,
         choices=Role.choices,
         default='user',
+        blank=True,
+        null=True,
         verbose_name='Роль',
     )
 
