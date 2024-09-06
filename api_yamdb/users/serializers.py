@@ -54,26 +54,45 @@ class UserMeSerializer(UserBaseSerializer):
             'first_name',
             'last_name',
         )
-        read_only_fields = ('id', 'role')
+        read_only_fields = ('username',)
 
 
 
-class UserSerializer(UserBaseSerializer):
 
+# class UserSerializer(UserBaseSerializer):
+
+#     class Meta:
+#         model = User
+#         fields = (
+#             'email',
+#             'username',
+#             'role',
+#             'bio',
+#             'first_name',
+#             'last_name',
+#         )
+#         extra_kwargs = {
+#             'username': {'required': True},
+#             'email': {'required': True},
+#         }
+
+
+class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = (
-            'email',
-            'username',
-            'role',
-            'bio',
-            'first_name',
-            'last_name',
-        )
-        extra_kwargs = {
-            'username': {'required': True},
-            'email': {'required': True},
-        }
+        fields = ('first_name', 'last_name', 'bio', 'role', 'email', 'username')
+
+
+    # def update(self, instance, validated_data):
+    #     for attr, value in validated_data.items():
+    #         setattr(instance, attr, value)
+    #     instance.save()
+    #     return instance
+
+    def validate(self, data):
+        user_validate(data)
+        return data
+
 
 
 class UserSignUpSerializer(UserBaseSerializer):
@@ -82,3 +101,6 @@ class UserSignUpSerializer(UserBaseSerializer):
         model = User
         fields = ('email', 'username',)
 
+    def validate(self, data):
+        user_validate(data)
+        return data

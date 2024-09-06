@@ -7,14 +7,48 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from django.contrib.auth import get_user_model
-
-from users.permissions import AdminOnlyPermission, IsAdminOrReadOnly
-from users.serializers import (
-    ObtainJWTSerializer, UserMeSerializer, UserSerializer, UserSignUpSerializer
+from .models import User
+from .serializers import (
+    UserSerializer, UserMeSerializer, UserSignUpSerializer, ObtainJWTSerializer
 )
+from .permissions import AdminOnlyPermission, IsAdminOrReadOnly
 
-User = get_user_model()
+
+class UserViewSet(viewsets.ModelViewSet):
+    queryset = User.objects.all()
+    serializer_class = UserSerializer
+    permission_classes = (IsAdminOrReadOnly,)
+    http_method_names = ['get', 'post', 'patch', 'delete']
+    lookup_field = 'username'
+    filter_backends = (filters.SearchFilter,)
+    search_fields = ('username',)
+
+    @action(
+        detail=False,
+        permission_classes=(IsAuthenticated,),
+        serializer_class=UserMeSerializer,
+    )
+    def me(self, request):
+        """Обрабатывает GET запрос users/me."""
+        user = request.user
+        serializer = self.get_serializer(user)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    @me.mapping.patch
+    def patch_me(self, request):
+        """Обрабатывает PATCH запрос users/me."""
+        user = request.user
+        data = request.data.copy()
+        if 'role' in data:
+            data.pop('role')
+        serializer = self.get_serializer(
+            user, data=data, partial=True
+        )
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 
 
 @api_view(['POST'])
@@ -42,56 +76,6 @@ def user_signup_view(request):
     send_confirmation_code(email=email, confirmation_code=confirmation_code)
     return Response(serializer.data, status=status.HTTP_200_OK)
 
-
-class UserViewSet(viewsets.ModelViewSet):
-
-    queryset = User.objects.all()
-    serializer_class = UserSerializer
-    permission_classes = (AdminOnlyPermission,)
-    http_method_names = ['get', 'post', 'patch', 'delete']
-    lookup_field = 'username'
-    filter_backends = (filters.SearchFilter,)
-    search_fields = ('username',)
-
-    @action(
-        detail=False,
-        permission_classes=(IsAuthenticated,),
-        serializer_class=UserMeSerializer,
-    )
-    def me(self, request):
-        """Обрабатывает GET запрос users/me."""
-        user = request.user
-        serializer = self.get_serializer(user)
-        return Response(serializer.data, status=status.HTTP_200_OK)
-
-    @me.mapping.patch
-    def patch_me(self, request):
-        """Обрабатывает PATCH запрос users/me."""
-        user = request.user
-        serializer = self.get_serializer(
-            user, data=request.data, partial=True
-        )
-        serializer.is_valid(raise_exception=True)
-        serializer.save()
-        return Response(serializer.data, status=status.HTTP_200_OK)
-
-
-# class ObtainJWTView(APIView):
-#     """Отправляет JWT токен в ответ на ПОСТ запрос с кодом."""
-
-#     permission_classes = (AllowAny,)
-#     authentication_classes = []
-
-#     def post(self, request, *args, **kwargs):
-#         serializer = ObtainJWTSerializer(data=request.data)
-#         serializer.is_valid(raise_exception=True)
-#         user = serializer.validated_data['user']
-
-#         if user is None:
-#             return Response({'detail': 'Invalid user.'}, status=status.HTTP_400_BAD_REQUEST)
-
-#         refresh = RefreshToken.for_user(user)
-#         return Response({'token': str(refresh.access_token)})
 
 class ObtainJWTView(APIView):
     """Отправляет JWT токен в ответ на ПОСТ запрос с кодом."""

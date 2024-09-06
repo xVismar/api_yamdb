@@ -1,5 +1,6 @@
 """Модуль с представлениями приложения api."""
 
+import re
 from django.shortcuts import get_object_or_404
 from rest_framework import filters, viewsets
 from reviews.models import Category, Genre, Review, Title, Comment
@@ -80,8 +81,27 @@ class CategoryViewSet(viewsets.ModelViewSet):
 class TitleViewSet(viewsets.ModelViewSet):
     """Представление произведения."""
 
-    queryset = Title.objects.annotate(rating=Avg('reviews__score'))
+    queryset = Title.objects.annotate(rating=Avg('reviews__score')).order_by('rating')
     permission_classes = (per.IsAdminOrReadOnly,)
+    http_method_names = ['get', 'post', 'patch', 'delete']
+
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        genre_slug = self.request.query_params.get('genre')
+        category_slug = self.request.query_params.get('category')
+        year = self.request.query_params.get('year')
+        name = self.request.query_params.get('name')
+        if genre_slug:
+            queryset = queryset.filter(genre__slug=genre_slug)
+        if category_slug:
+            queryset = queryset.filter(category__slug=category_slug)
+        if year:
+            queryset = queryset.filter(year=year)
+        if name:
+            queryset = queryset.filter(name=name)
+
+        return queryset
 
     def get_serializer_class(self):
         if self.request.method in permissions.SAFE_METHODS:
@@ -103,11 +123,6 @@ class TitleViewSet(viewsets.ModelViewSet):
         headers = self.get_success_headers(serializer.data)
         return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
 
-    def update(self, request, *args, **kwargs):
-        if not request.user.is_staff:
-            return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
-        return super().update(request, *args, **kwargs)
-
     def partial_update(self, request, *args, **kwargs):
         instance = self.get_object()
         serializer = self.get_serializer(
@@ -122,6 +137,7 @@ class ReviewViewSet(viewsets.ModelViewSet):
 
     serializer_class = ReviewSerializer
     permission_classes = (per.IsAuthorOrModeratorOrReadOnly,)
+    http_method_names = ['get', 'post', 'patch', 'delete']
 
     def get_permissions(self):
         return (
@@ -145,15 +161,14 @@ class ReviewViewSet(viewsets.ModelViewSet):
             title=self.get_title_or_404()
         )
 
-    def update(self, request, *args, **kwargs):
-        return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
-
 
 class CommentViewSet(viewsets.ModelViewSet):
     """Представление комментария."""
 
+    queryset = Comment.objects.all()
     serializer_class = CommentSerializer
     permission_classes = (per.IsAuthorOrModeratorOrReadOnly,)
+    http_method_names = ['get', 'post', 'patch', 'delete']
 
     def get_permissions(self):
         return (
@@ -168,16 +183,12 @@ class CommentViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         """Переопределяет метод для фильтрации комментариев."""
-        return self.get_review_or_404().comments.all()  # This is correct
+        return self.get_review_or_404().comments.all().order_by('pub_date')
 
     def perform_create(self, serializer):
         """Записывает в БД комментарий и его автора."""
         serializer.save(
             author=self.request.user,
-            review=self.get_review_or_404()  # Changed from title to review
+            review=self.get_review_or_404()
         )
 
-    def list(self, request, title_id=None, review_id=None):
-        comments = Comment.objects.filter(review_id=review_id)
-        serializer = CommentSerializer(comments, many=True)
-        return Response(serializer.data)
