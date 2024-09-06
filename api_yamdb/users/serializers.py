@@ -1,17 +1,19 @@
 from django.contrib.auth.tokens import default_token_generator
 from rest_framework import serializers
 from rest_framework.exceptions import NotFound
-from users.validators import user_validate
+from users.validators import validate_username
 from django.contrib.auth import get_user_model
+
 
 User = get_user_model()
 
 
 class UserBaseSerializer(serializers.ModelSerializer):
 
-    def validate(self, data):
-        user_validate(data)
-        return super().validate(data)
+    def validate(self, attrs):
+        if 'username' in attrs:
+            validate_username(attrs)
+        return attrs
 
 
 class ObtainJWTSerializer(serializers.Serializer):
@@ -46,7 +48,6 @@ class UserMeSerializer(UserBaseSerializer):
     class Meta:
         model = User
         fields = (
-            'id',
             'email',
             'username',
             'role',
@@ -54,45 +55,29 @@ class UserMeSerializer(UserBaseSerializer):
             'first_name',
             'last_name',
         )
-        read_only_fields = ('username',)
+    read_only_fields = ('role',)
+
+    def update(self, instance, validated_data):
+        validated_data.pop('role', None)
+        return super().update(instance, validated_data)
 
 
-
-
-# class UserSerializer(UserBaseSerializer):
-
-#     class Meta:
-#         model = User
-#         fields = (
-#             'email',
-#             'username',
-#             'role',
-#             'bio',
-#             'first_name',
-#             'last_name',
-#         )
-#         extra_kwargs = {
-#             'username': {'required': True},
-#             'email': {'required': True},
-#         }
-
-
-class UserSerializer(serializers.ModelSerializer):
+class UserSerializer(UserBaseSerializer):
     class Meta:
         model = User
-        fields = ('first_name', 'last_name', 'bio', 'role', 'email', 'username')
-
-
-    # def update(self, instance, validated_data):
-    #     for attr, value in validated_data.items():
-    #         setattr(instance, attr, value)
-    #     instance.save()
-    #     return instance
-
-    def validate(self, data):
-        user_validate(data)
-        return data
-
+        fields = (
+            'username',
+            'email',
+            'role',
+            'first_name',
+            'last_name',
+            'bio',
+        )
+        extra_kwargs = {
+            'role': {'required': False},
+            'username': {'required': True},
+            'email': {'required': True},
+        }
 
 
 class UserSignUpSerializer(UserBaseSerializer):
@@ -101,6 +86,3 @@ class UserSignUpSerializer(UserBaseSerializer):
         model = User
         fields = ('email', 'username',)
 
-    def validate(self, data):
-        user_validate(data)
-        return data

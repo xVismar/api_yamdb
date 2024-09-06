@@ -17,38 +17,30 @@ from .permissions import AdminOnlyPermission, IsAdminOrReadOnly
 class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
     serializer_class = UserSerializer
-    permission_classes = (IsAdminOrReadOnly,)
+    permission_classes = (AdminOnlyPermission,)
     http_method_names = ['get', 'post', 'patch', 'delete']
     lookup_field = 'username'
     filter_backends = (filters.SearchFilter,)
     search_fields = ('username',)
 
-    @action(
-        detail=False,
-        permission_classes=(IsAuthenticated,),
-        serializer_class=UserMeSerializer,
-    )
+
+    @action(detail=False, permission_classes=(IsAuthenticated,), serializer_class=UserMeSerializer)
     def me(self, request):
-        """Обрабатывает GET запрос users/me."""
+        """Handles GET request to users/me."""
         user = request.user
         serializer = self.get_serializer(user)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     @me.mapping.patch
     def patch_me(self, request):
-        """Обрабатывает PATCH запрос users/me."""
         user = request.user
-        data = request.data.copy()
-        if 'role' in data:
-            data.pop('role')
+        data = request.data
         serializer = self.get_serializer(
             user, data=data, partial=True
         )
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_200_OK)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(status=status.HTTP_200_OK)
 
 
 @api_view(['POST'])

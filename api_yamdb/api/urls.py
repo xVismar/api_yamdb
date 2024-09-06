@@ -15,13 +15,14 @@ router.register('categories', CategoryViewSet)
 router.register(r'titles', TitleViewSet, basename='titles')
 router.register(r'titles/(?P<title_id>\d+)/reviews', ReviewViewSet, basename='reviews')
 router.register(r'titles/(?P<title_id>\d+)/reviews/(?P<review_id>\d+)/comments', CommentViewSet, basename='comment')
-router.register('users', UserViewSet, basename='users')
+router.register(r'users', UserViewSet, basename='users')
 
 api_version_patterns = [
     path('', include(router.urls)),
     path('auth/signup/', user_signup_view, name='signup'),
-    path('auth/token/', ObtainJWTView.as_view(), name='token')
+    path('auth/token/', ObtainJWTView.as_view(), name='token'),
 ]
+
 
 urlpatterns = [
     path('v1/', include(api_version_patterns)),
