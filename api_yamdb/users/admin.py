@@ -25,7 +25,6 @@ class TitleAdmin(admin.ModelAdmin):
     list_display = (
         'name',
         'year',
-        'rating',
         'description'
     )
     search_fields = ('name',)
