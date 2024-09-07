@@ -22,7 +22,7 @@ class IsAuthorOrModeratorOrReadOnly(permissions.BasePermission):
             or request.user.is_moderator
         )
 
- def has_object_permission(self, request, view, obj):
+    def has_object_permission(self, request, view, obj):
         if request.method in permissions.SAFE_METHODS:
             return True
         if request.user.is_authenticated:
