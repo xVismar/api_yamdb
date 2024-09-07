@@ -49,7 +49,6 @@ class User(AbstractUser):
         verbose_name = 'пользователь'
         verbose_name_plural = 'Пользователи'
 
-
     @property
     def is_admin(self):
         return self.role == 'admin' or self.is_superuser or self.is_staff

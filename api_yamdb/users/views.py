@@ -7,11 +7,11 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from .models import User
-from .serializers import (
+from users.models import User
+from users.serializers import (
     UserSerializer, UserMeSerializer, UserSignUpSerializer, ObtainJWTSerializer
 )
-from .permissions import AdminOnlyPermission, IsAdminOrReadOnly
+from users.permissions import AdminOnlyPermission
 
 
 class UserViewSet(viewsets.ModelViewSet):
@@ -23,16 +23,20 @@ class UserViewSet(viewsets.ModelViewSet):
     filter_backends = (filters.SearchFilter,)
     search_fields = ('username',)
 
-
-    @action(detail=False, permission_classes=(IsAuthenticated,), serializer_class=UserMeSerializer)
+    @action(
+        detail=False,
+        permission_classes=(IsAuthenticated,),
+        serializer_class=UserMeSerializer
+    )
     def me(self, request):
-        """Handles GET request to users/me."""
+        """Обрабатывает GET запрос к users/me."""
         user = request.user
         serializer = self.get_serializer(user)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     @me.mapping.patch
     def patch_me(self, request):
+        """Обрабатывает PATCH запрос к users/me."""
         user = request.user
         data = request.data
         serializer = self.get_serializer(

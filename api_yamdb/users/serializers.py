@@ -1,9 +1,9 @@
+from django.contrib.auth import get_user_model
 from django.contrib.auth.tokens import default_token_generator
 from rest_framework import serializers
 from rest_framework.exceptions import NotFound
-from users.validators import validate_username
-from django.contrib.auth import get_user_model
 
+from users.validators import validate_username
 
 User = get_user_model()
 
@@ -85,4 +85,3 @@ class UserSignUpSerializer(UserBaseSerializer):
     class Meta:
         model = User
         fields = ('email', 'username',)
-

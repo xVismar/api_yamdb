@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from reviews.models import Category, Title, Genre, Review
+from reviews.models import Category, Title, Genre, Review, Comment
 from users.models import User
 
 
@@ -47,3 +47,15 @@ class UserAdmin(admin.ModelAdmin):
         'bio'
     )
     search_fields = ('username', 'role')
+
+
+@admin.register(Comment)
+class CommentAdmin(admin.ModelAdmin):
+    list_display = (
+        'review',
+        'author',
+        'text',
+        'pub_date'
+
+    )
+    search_fields = ('author', 'review')
