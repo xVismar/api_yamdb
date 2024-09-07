@@ -121,14 +121,8 @@ class CommentSerializer(serializers.ModelSerializer):
 
         model = Comment
         exclude = ('review',)
+        read_only_fields = ('pubdate',)
 
-
-class UserBaseSerializer(serializers.ModelSerializer):
-    pass
-    # def validate(self, attrs):
-    #     if 'username' in attrs:
-    #         validate_username(attrs)
-    #     return attrs
 
 
 class ObtainJWTSerializer(serializers.Serializer):
@@ -158,7 +152,7 @@ class ObtainJWTSerializer(serializers.Serializer):
         return data
 
 
-class UserMeSerializer(UserBaseSerializer):
+class UserMeSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
@@ -177,7 +171,7 @@ class UserMeSerializer(UserBaseSerializer):
         return super().update(instance, validated_data)
 
 
-class UserSerializer(UserBaseSerializer):
+class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = (
@@ -195,7 +189,7 @@ class UserSerializer(UserBaseSerializer):
         }
 
 
-class UserSignUpSerializer(UserBaseSerializer):
+class UserSignUpSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
