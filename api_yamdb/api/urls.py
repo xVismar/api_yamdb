@@ -25,12 +25,16 @@ router_v1.register(
 )
 router_v1.register('users', UserViewSet, basename='users')
 
-auth_urls = [
-    path('auth/signup/', SignUpView.as_view()),
-    path('auth/token/', ObtainJWTView.as_view()),
+auth_url_patterns = [
+    path('signup/', SignUpView.as_view()),
+    path('token/', ObtainJWTView.as_view()),
+]
+
+api_version_url_patterns = [
+    path('', include(router_v1.urls)),
+    path('auth/', include(auth_url_patterns)),
 ]
 
 urlpatterns = [
-    path('v1/', include(router_v1.urls)),
-    path('v1/', include(auth_urls)),
+    path('v1/', include(api_version_url_patterns)),
 ]

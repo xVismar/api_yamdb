@@ -2,30 +2,24 @@
 
 from django.db.models import Avg
 from django.shortcuts import get_object_or_404
-from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import filters, permissions, status, viewsets
 from rest_framework.response import Response
-
 from api.filters import TitleFilter
 from api.serializers import UserSerializer
-from reviews.models import Category, Comment, Genre, Review, Title
+from reviews.models import Category, Comment, Genre, Review, Title, User
 from api.permissions import (
     AdminOnly, IsAuthorOrModeratorOrReadOnly, ReadOnlyOrAdmin
 )
-
-from django.contrib.auth.tokens import default_token_generator
 from django.core.mail import send_mail
 from rest_framework import status, viewsets, filters
-from rest_framework.decorators import action, api_view, permission_classes
+from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from rest_framework_simplejwt.tokens import RefreshToken
-
-from reviews.models import User
-from api.serializers import (SignUpSerializer,
-    BaseUserSerializer, CategorySerializer, CommentSerializer, ObtainJWTSerializer,
-                             GenreSerializer, ReviewSerializer, TitleSafeSerializer, TitleUnsafeSerializer
+from api.serializers import (
+    SignUpSerializer, UserSerializer, CategorySerializer, CommentSerializer,
+    ObtainJWTSerializer, UserProfileSerializer, GenreSerializer,
+    ReviewSerializer, TitleSafeSerializer, TitleUnsafeSerializer
 )
 
 from django.conf import settings
@@ -43,10 +37,7 @@ from rest_framework.filters import SearchFilter
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import AccessToken
-from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework.viewsets import ModelViewSet
-from rest_framework.permissions import SAFE_METHODS
-from rest_framework.throttling import UserRateThrottle
 from django_filters.rest_framework import DjangoFilterBackend
 
 
@@ -188,7 +179,7 @@ class UserViewSet(ModelViewSet):
     """Представление для операций с пользователями."""
 
     queryset = User.objects.all()
-    serializer_class = BaseUserSerializer
+    serializer_class = UserSerializer
     permission_classes = (AdminOnly,)
     filter_backends = (SearchFilter,)
     lookup_field = 'username'
@@ -204,10 +195,10 @@ class UserViewSet(ModelViewSet):
         """Представление профиля текущего пользователя."""
         if not request.method == 'PATCH':
             return Response(
-                UserSerializer(request.user).data,
+                UserProfileSerializer(request.user).data,
                 status=status.HTTP_200_OK
             )
-        serializer = UserSerializer(
+        serializer = UserProfileSerializer(
             request.user, data=request.data, partial=True
         )
         serializer.is_valid(raise_exception=True)

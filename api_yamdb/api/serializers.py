@@ -161,7 +161,7 @@ class CommentSerializer(serializers.ModelSerializer):
 #         model = User
 #         fields = ('email', 'username',)
 
-class BaseUserSerializer(serializers.ModelSerializer, ValidateUsername):
+class UserSerializer(serializers.ModelSerializer, ValidateUsername):
 
     class Meta:
         model = User
@@ -175,9 +175,9 @@ class BaseUserSerializer(serializers.ModelSerializer, ValidateUsername):
         )
 
 
-class UserSerializer(BaseUserSerializer):
+class UserProfileSerializer(UserSerializer):
 
-    class Meta(BaseUserSerializer.Meta):
+    class Meta(UserSerializer.Meta):
         read_only_fields = ('role',)
 
 
@@ -202,8 +202,4 @@ class ObtainJWTSerializer(serializers.Serializer, ValidateUsername):
         required=True
     )
 
-    # class Meta(BaseUserSerializer.Meta):
-    #     fields = (
-    #         'author',
-    #         'confirmation_code',
-    #     )
+   
