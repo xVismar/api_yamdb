@@ -9,7 +9,7 @@ from rest_framework.response import Response
 from api.filters import TitleFilter
 from api.serializers import (CategorySerializer, CommentSerializer,
                              GenreSerializer, ReviewSerializer,
-                             TitleSafeSerializer, TitleUnsafeSerializer)
+                             TitleReadSerializer, TitleModificateSerializer)
 from reviews.models import Category, Comment, Genre, Review, Title
 from api.permissions import (
     AdminOnly, IsAuthorOrModeratorOrReadOnly, ReadOnlyOrAdmin
@@ -28,7 +28,6 @@ from reviews.models import User
 from api.serializers import (
     UserSerializer, UserMeSerializer, UserSignUpSerializer, ObtainJWTSerializer
 )
-
 
 
 # class BaseViewset(viewsets.ModelViewSet):
@@ -100,8 +99,8 @@ class TitleViewSet(viewsets.ModelViewSet):
 
     def get_serializer_class(self):
         if self.request.method in permissions.SAFE_METHODS:
-            return TitleSafeSerializer
-        return TitleUnsafeSerializer
+            return TitleReadSerializer
+        return TitleModificateSerializer
 
     def create(self, request, *args, **kwargs):
         """Создает новый объект Title и возвращает статус 201."""
@@ -164,7 +163,6 @@ class CommentViewSet(viewsets.ModelViewSet):
             author=self.request.user,
             review=self.get_review_or_404()
         )
-
 
 
 class UserViewSet(viewsets.ModelViewSet):

@@ -8,34 +8,38 @@ from api.views import (
 )
 
 app_name = 'api'
-router = DefaultRouter()
-router.register('genres', GenreViewSet)
-router.register('categories', CategoryViewSet)
-router.register(
+router_v1 = DefaultRouter()
+router_v1.register('genres', GenreViewSet)
+router_v1.register('categories', CategoryViewSet)
+router_v1.register(
     r'titles',
     TitleViewSet,
     basename='titles'
 )
-router.register(
+router_v1.register(
     r'titles/(?P<title_id>\d+)/reviews',
     ReviewViewSet,
     basename='reviews'
 )
-router.register(
+router_v1.register(
     r'titles/(?P<title_id>\d+)/reviews/(?P<review_id>\d+)/comments',
     CommentViewSet,
     basename='comment'
 )
-router.register(
+router_v1.register(
     r'users',
     UserViewSet,
     basename='users'
 )
 
+auth_patterns = [
+    path('signup/', user_signup_view, name='signup'),
+    path('token/', ObtainJWTView.as_view(), name='token'),
+]
+
 api_version_patterns = [
-    path('', include(router.urls)),
-    path('auth/signup/', user_signup_view, name='signup'),
-    path('auth/token/', ObtainJWTView.as_view(), name='token'),
+    path('', include(router_v1.urls)),
+    path('auth/', include(auth_patterns))
 ]
 
 
