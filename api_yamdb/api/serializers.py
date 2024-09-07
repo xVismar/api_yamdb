@@ -4,7 +4,7 @@ from reviews.models import Category, Genre, Review, Title, Comment
 from django.contrib.auth import get_user_model
 from django.contrib.auth.tokens import default_token_generator
 from rest_framework import serializers
-from rest_framework.exceptions import NotFound
+from rest_framework.exceptions import NotFound, ValidationError
 from django.conf import settings
 from rest_framework import serializers
 from api_yamdb.constants import (
@@ -38,14 +38,15 @@ class CategorySerializer(serializers.ModelSerializer):
 class TitleSafeSerializer(serializers.ModelSerializer):
     """Сериализатор произведений под безопасные запросы."""
 
-    genre = GenreSerializer(read_only=True, many=True)
-    category = CategorySerializer(read_only=True)
-    rating = serializers.IntegerField(read_only=True)
+    genre = GenreSerializer(many=True)
+    category = CategorySerializer()
+    rating = serializers.IntegerField()
 
     class Meta:
         model = Title
         fields = ('id', 'name', 'year', 'description',
                   'genre', 'category', 'rating')
+        read_only_fields = ('__all__',)
 
 
 class TitleUnsafeSerializer(serializers.ModelSerializer):
@@ -77,7 +78,7 @@ class ReviewSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Review
-        fields = ('id', 'title', 'text', 'author', 'score', 'pub_date')
+        fields = ('id', 'text', 'author', 'score', 'pub_date')
         read_only_fields = ('author', 'pub_date', 'title', 'id')
 
     def validate(self, attrs):
@@ -93,17 +94,21 @@ class ReviewSerializer(serializers.ModelSerializer):
                 )
         return attrs
 
+    def score_validator(self, value):
+        if MIN_VALUE_SCORE < value <MAX_VALUE_SCORE:
+            return value
+        return ValidationError(f'Оценка должна быть в пределах от {MIN_VALUE_SCORE} до {MAX_VALUE_SCORE}!')
+
 
 class CommentSerializer(serializers.ModelSerializer):
     """Сериализатор комментария."""
 
     author = SlugRelatedField(slug_field='username', read_only=True)
-    title = serializers.SlugRelatedField(slug_field='name', read_only=True)
+    # title = serializers.SlugRelatedField(slug_field='name', read_only=True)
 
     class Meta:
         model = Comment
-        fields = '__all__'
-        read_only_fields = ('review',)
+        fields = ('id', 'text', 'author', 'pub_date')
 
 
 # class ObtainJWTSerializer(serializers.Serializer):
