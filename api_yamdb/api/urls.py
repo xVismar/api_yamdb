@@ -25,6 +25,7 @@ router_v1.register(
 )
 router_v1.register('users', UserViewSet, basename='users')
 
+
 auth_url_patterns = [
     path('signup/', SignUpView.as_view()),
     path('token/', ObtainJWTView.as_view()),
