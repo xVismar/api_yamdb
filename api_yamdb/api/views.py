@@ -80,7 +80,6 @@ class TitleViewSet(BaseViewset):
     filterset_class = TitleFilter
     ordering_fields = ['name', 'year']
 
-
     def get_serializer_class(self):
         if self.request.method in permissions.SAFE_METHODS:
             return TitleSafeSerializer
@@ -107,7 +106,6 @@ class ReviewViewSet(BaseViewset):
 
     serializer_class = ReviewSerializer
     permission_classes = (IsAuthorOrModeratorOrReadOnly,)
-
 
     def get_title_or_404(self):
         """Отдаёт определенное произведение или ошибку 404."""
