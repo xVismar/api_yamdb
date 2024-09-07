@@ -1,11 +1,10 @@
 from django.contrib import admin
 
 from reviews.models import Category, Title, Genre, Review, Comment
-from users.models import User
+from reviews.models import User
 
 
 empty_value_display = '-пусто-'
-
 
 
 @admin.register(Category)

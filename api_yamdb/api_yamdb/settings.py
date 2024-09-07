@@ -12,7 +12,7 @@ DEBUG = True
 
 ALLOWED_HOSTS = ['*']
 
-AUTH_USER_MODEL = 'users.User'
+AUTH_USER_MODEL = 'reviews.User'
 
 # Application definition
 
@@ -27,7 +27,6 @@ INSTALLED_APPS = [
     'rest_framework.authtoken',
     'rest_framework_simplejwt',
     'django_filters',
-    'users.apps.UsersConfig',
     'reviews.apps.ReviewsConfig',
     'api.apps.ApiConfig'
 ]
@@ -130,3 +129,7 @@ STATIC_URL = '/static/'
 STATICFILES_DIRS = ((BASE_DIR / 'static/'),)
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+VALID_CHARS_FOR_CONFIRMATION_CODE = digits
+MAX_LENGTH_CONFIRMATION_CODE = 8
+USER_PROFILE_URL = 'me'
