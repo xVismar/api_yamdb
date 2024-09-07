@@ -3,19 +3,16 @@ from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 
 from api.views import (
-    CategoryViewSet, GenreViewSet, ReviewViewSet, TitleViewSet, CommentViewSet, UserViewSet, ObtainJWTView, user_signup_view
+    CategoryViewSet, GenreViewSet, ReviewViewSet, TitleViewSet, CommentViewSet, UserViewSet, ObtainJWTView, SignUpView
 
 )
 
 app_name = 'api'
+
 router_v1 = DefaultRouter()
-router_v1.register('genres', GenreViewSet)
-router_v1.register('categories', CategoryViewSet)
-router_v1.register(
-    r'titles',
-    TitleViewSet,
-    basename='titles'
-)
+router_v1.register('categories', CategoryViewSet, basename='categories')
+router_v1.register('genres', GenreViewSet, basename='genres')
+router_v1.register('titles', TitleViewSet, basename='titles')
 router_v1.register(
     r'titles/(?P<title_id>\d+)/reviews',
     ReviewViewSet,
@@ -24,25 +21,21 @@ router_v1.register(
 router_v1.register(
     r'titles/(?P<title_id>\d+)/reviews/(?P<review_id>\d+)/comments',
     CommentViewSet,
-    basename='comment'
+    basename='comments'
 )
-router_v1.register(
-    r'users',
-    UserViewSet,
-    basename='users'
-)
+router_v1.register('users', UserViewSet, basename='users')
 
-auth_patterns = [
-    path('signup/', user_signup_view, name='signup'),
-    path('token/', ObtainJWTView.as_view(), name='token'),
+
+auth_url_patterns = [
+    path('signup/', SignUpView.as_view()),
+    path('token/', ObtainJWTView.as_view()),
 ]
 
-api_version_patterns = [
+api_version_url_patterns = [
     path('', include(router_v1.urls)),
-    path('auth/', include(auth_patterns))
+    path('auth/', include(auth_url_patterns)),
 ]
-
 
 urlpatterns = [
-    path('v1/', include(api_version_patterns)),
+    path('v1/', include(api_version_url_patterns)),
 ]

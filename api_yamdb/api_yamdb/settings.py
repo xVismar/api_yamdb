@@ -124,6 +124,7 @@ EMAIL_BACKEND = 'django.core.mail.backends.filebased.EmailBackend'
 EMAIL_FILE_PATH = BASE_DIR / 'sent_emails'
 SENDER_EMAIL = 'api_yamdb@ya.ru'
 
+
 STATIC_URL = '/static/'
 
 STATICFILES_DIRS = ((BASE_DIR / 'static/'),)
@@ -133,3 +134,4 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 VALID_CHARS_FOR_CONFIRMATION_CODE = digits
 MAX_LENGTH_CONFIRMATION_CODE = 8
 USER_PROFILE_URL = 'me'
+
