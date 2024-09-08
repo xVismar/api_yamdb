@@ -1,5 +1,3 @@
-"""Модуль с представлениями приложения api."""
-
 from random import sample
 
 from django.conf import settings
@@ -26,9 +24,34 @@ from api.serializers import (
     UserSerializer
 )
 from reviews.models import Category, Genre, Review, Title, User
+from rest_framework import viewsets, mixins
+from rest_framework.filters import SearchFilter
+from django.shortcuts import get_object_or_404
+from django.db import IntegrityError
+from rest_framework import status, permissions
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.response import Response
+from rest_framework.exceptions import ValidationError
+from rest_framework_simplejwt.tokens import AccessToken
+
+from api.serializers import ObtainJWTSerializer, SignUpSerializer
+from reviews.models import User
 
 
-class GenreCategoryMixinViewSet(
+
+class CRDSlugSearchViewSet(
+    mixins.ListModelMixin,
+    mixins.CreateModelMixin,
+    mixins.DestroyModelMixin,
+    viewsets.GenericViewSet
+):
+    filter_backends = (SearchFilter,)
+    lookup_field = 'slug'
+    search_fields = ('name',)
+    permission_classes = (ReadOnlyOrAdmin,)
+
+
+class BaseCRDViewset(
     viewsets.ViewSetMixin, generics.ListCreateAPIView, generics.DestroyAPIView
 ):
 
@@ -38,30 +61,27 @@ class GenreCategoryMixinViewSet(
     lookup_field = 'slug'
     http_method_names = ['get', 'post', 'patch', 'delete']
 
-    def get(self, request, *args, **kwargs):
-        return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
+
+# class BaseCreateViewSet(viewsets.ModelViewSet):
+
+#     def create(self, request, *args, **kwargs):
+#         serializer = self.get_serializer(data=request.data)
+#         serializer.is_valid(raise_exception=True)
+#         self.perform_create(serializer)
+#         headers = self.get_success_headers(serializer.data)
+#         return Response(
+#             serializer.data, status=status.HTTP_201_CREATED, headers=headers
+#         )
 
 
-class BaseCreateViewSet(viewsets.ModelViewSet):
-
-    def create(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        self.perform_create(serializer)
-        headers = self.get_success_headers(serializer.data)
-        return Response(
-            serializer.data, status=status.HTTP_201_CREATED, headers=headers
-        )
-
-
-class GenreViewSet(GenreCategoryMixinViewSet):
+class GenreViewSet(BaseCRDViewset):
     """Представление жанра."""
 
     serializer_class = GenreSerializer
     queryset = Genre.objects.all()
 
 
-class CategoryViewSet(GenreCategoryMixinViewSet):
+class CategoryViewSet(BaseCRDViewset):
     """Представление категории."""
 
     serializer_class = CategorySerializer
@@ -84,17 +104,17 @@ class TitleViewSet(viewsets.ModelViewSet):
             return TitleReadSerializer
         return TitleModificateSerializer
 
-    def perform_create(self, serializer):
-        """Создает новый объект Title и возвращает статус 201."""
-        serializer.is_valid(raise_exception=True)
-        serializer.save()
+    # def perform_create(self, serializer):
+    #     """Создает новый объект Title и возвращает статус 201."""
+    #     serializer.is_valid(raise_exception=True)
+    #     serializer.save()
 
-    def perform_update(self, serializer):
-        serializer.is_valid(raise_exception=True)
-        serializer.save()
+    # def perform_update(self, serializer):
+    #     serializer.is_valid(raise_exception=True)
+    #     serializer.save()
 
 
-class ReviewViewSet(BaseCreateViewSet):
+class ReviewViewSet(viewsets.ModelViewSet):
     """Представление отзыва."""
 
     http_method_names = ['get', 'post', 'patch', 'delete']
@@ -114,7 +134,7 @@ class ReviewViewSet(BaseCreateViewSet):
         )
 
 
-class CommentViewSet(BaseCreateViewSet):
+class CommentViewSet(viewsets.ModelViewSet):
     """Представление комментария."""
 
     http_method_names = ['get', 'post', 'patch', 'delete']
@@ -174,71 +194,110 @@ class UserViewSet(viewsets.ModelViewSet):
     )
     def profile(self, request):
         """Представление профиля текущего пользователя."""
-        if not request.method == 'PATCH':
-            return Response(
-                UserProfileSerializer(request.user).data,
-                status=status.HTTP_200_OK
-            )
-        serializer = UserProfileSerializer(
-            request.user, data=request.data, partial=True
+        serializer = (
+            UserProfileSerializer(request.user).data
+            if not request.method == 'PATCH'
+            else UserProfileSerializer(
+                request.user, data=request.data, partial=True)
         )
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(serializer.data, status=status.HTTP_200_OK)
 
+# class SignUpView(APIView):
+#     """Представление для регистрации новых пользователей."""
 
-class SignUpView(APIView):
-    """Представление для регистрации новых пользователей."""
+#     permission_classes = (permissions.AllowAny,)
 
-    permission_classes = (permissions.AllowAny,)
+#     def post(self, request):
+#         serializer = SignUpSerializer(data=request.data)
+#         serializer.is_valid(raise_exception=True)
+#         email = request.data.get('email')
+#         username = request.data.get('username')
+#         try:
+#             user, created = User.objects.get_or_create(
+#                 username=username,
+#                 email=email
+#             )
+#         except IntegrityError:
+#             raise ValidationError(
+#                 '{field} уже зарегистрирован!'.format(
+#                     field='username' if User.objects.filter(
+#                         username=username).exists() else 'email'
+#                 )
+#             )
+#         user.confirmation_code = make_confirmation_code()
+#         user.save()
+#         send_confirmation_code(user)
+#         return Response(serializer.data, status=status.HTTP_200_OK)
 
-    def post(self, request):
-        serializer = SignUpSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        email = request.data.get('email')
-        username = request.data.get('username')
-        try:
-            user, created = User.objects.get_or_create(
-                username=username,
-                email=email
+
+# class ObtainJWTView(APIView):
+#     permission_classes = (permissions.AllowAny,)
+
+#     def post(self, request, *args, **kwargs):
+#         serializer = ObtainJWTSerializer(data=request.data)
+#         serializer.is_valid(raise_exception=True)
+#         username = request.data.get('username')
+#         confirmation_code = request.data.get('confirmation_code')
+
+#         try:
+#             user = get_object_or_404(User, username=username)
+#         except User.DoesNotExist:
+#             raise ValidationError('Пользователь не найден.')
+
+#         if user.confirmation_code != confirmation_code:
+#             raise ValidationError(
+#                 'Неверный код подтверждения. Запросите код ещё раз.'
+#             )
+
+#         user.is_registration_complete = True
+#         user.save()
+
+#         return Response(
+#             {'token': str(AccessToken.for_user(user))},
+#             status=status.HTTP_200_OK
+#         )
+
+
+
+@api_view(['POST'])
+@permission_classes([permissions.AllowAny])
+def obtain_jwt_view(request):
+    serializer = ObtainJWTSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+    username = request.data.get('username')
+    confirmation_code = request.data.get('confirmation_code')
+
+    try:
+        user = get_object_or_404(User, username=username)
+    except User.DoesNotExist:
+        raise ValidationError('Пользователь не найден.')
+
+    if user.confirmation_code != confirmation_code:
+        raise ValidationError('Неверный код подтверждения. Запросите код ещё раз.')
+
+    user.is_registration_complete = True
+    user.save()
+
+    return Response({'token': str(AccessToken.for_user(user))}, status=status.HTTP_200_OK)
+
+
+@api_view(['POST'])
+@permission_classes([permissions.AllowAny])
+def sign_up_view(request):
+    serializer = SignUpSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+    email = request.data.get('email')
+    username = request.data.get('username')
+
+    except IntegrityError:
+        raise ValidationError(
+            '{field} уже зарегистрирован!'.format(
+                field='username' if User.objects.filter(username=username).exists() else 'email'
             )
-            if created or not user.is_registration_complete:
-                user.confirmation_code = make_confirmation_code()
-                user.save()
-                send_confirmation_code(user)
-        except IntegrityError:
-            raise ValidationError(
-                '{field} уже зарегистрирован!'.format(
-                    field='username' if User.objects.filter(
-                        username=username).exists() else 'email'
-                )
-            )
-        return Response(serializer.data, status=status.HTTP_200_OK)
-
-
-class ObtainJWTView(APIView):
-    permission_classes = (permissions.AllowAny,)
-
-    def post(self, request, *args, **kwargs):
-        serializer = ObtainJWTSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        username = request.data.get('username')
-        confirmation_code = request.data.get('confirmation_code')
-
-        try:
-            user = get_object_or_404(User, username=username)
-        except User.DoesNotExist:
-            raise ValidationError('Пользователь не найден.')
-
-        if user.confirmation_code != confirmation_code:
-            raise ValidationError(
-                'Неверный код подтверждения. Запросите код ещё раз.'
-            )
-
-        user.is_registration_complete = True
-        user.save()
-
-        return Response(
-            {'token': str(AccessToken.for_user(user))},
-            status=status.HTTP_200_OK
         )
+    user.confirmation_code = make_confirmation_code()
+    user.save()
+    send_confirmation_code(user)
+    return Response(serializer.data, status=status.HTTP_200_OK)

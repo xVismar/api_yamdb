@@ -4,7 +4,7 @@ from rest_framework.routers import DefaultRouter
 
 from api.views import (
     CategoryViewSet, GenreViewSet, ReviewViewSet, TitleViewSet,
-    CommentViewSet, UserViewSet, ObtainJWTView, SignUpView
+    CommentViewSet, UserViewSet, obtain_jwt_view, sign_up_view
 )
 
 app_name = 'api'
@@ -27,8 +27,8 @@ router_v1.register('users', UserViewSet, basename='users')
 
 
 auth_url_patterns = [
-    path('signup/', SignUpView.as_view()),
-    path('token/', ObtainJWTView.as_view()),
+    path('signup/', sign_up_view),
+    path('token/', obtain_jwt_view),
 ]
 
 api_version_url_patterns = [

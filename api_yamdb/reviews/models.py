@@ -1,15 +1,10 @@
-"""Модуль с моделями приложения reviews."""
-
-
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.contrib.auth.models import AbstractUser
-from django.db import models
 from django.core.validators import MaxValueValidator, MinValueValidator
-from django.db import models
 from django.conf import settings
 
-from api_yamdb.constants import (
+from .constants import (
     MAX_LENGTH_EMAIL,
     MAX_LENGTH_FIRST_NAME,
     MAX_LENGTH_STR,
@@ -24,7 +19,7 @@ from api_yamdb.constants import (
     ADMIN,
     ROLE_CHOICES
 )
-from api.validators import validate_year, ValidateUsername
+from .validators import validate_year, ValidateUsername
 
 
 class User(AbstractUser):
@@ -33,7 +28,7 @@ class User(AbstractUser):
         max_length=MAX_LENGTH_USERNAME,
         unique=True,
         validators=[ValidateUsername()],
-        verbose_name='Пользовательское имя'
+        verbose_name='Юзернэйм'
     )
     email = models.EmailField(
         max_length=MAX_LENGTH_EMAIL,
@@ -67,10 +62,6 @@ class User(AbstractUser):
         max_length=settings.MAX_LENGTH_CONFIRMATION_CODE,
         null=True,
         verbose_name='Код подтверждения'
-    )
-    is_registration_complete = models.BooleanField(
-        default=False,
-        verbose_name='Регистрация завершена'
     )
 
     class Meta:
