@@ -8,11 +8,11 @@
 Разработка полноценного API с нуля для проекта YaMDB
 
 
-## Использованные технологии  
-Основа проекта  
-Python 3.9.13  
-Django 3.2.16   
-Django Rest Famework 3.12.4  
+## Использованные технологии
+Основа проекта
+Python
+Django
+Django Rest Famework
 
 
 
@@ -35,27 +35,6 @@ Django Rest Famework 3.12.4
 
 
 
-## Структура проекта
-<details>
-  <summary style="font-size:250%;">Проект имеет следующую структуру</summary>
-  <p>
-
-  `api_yamdb/` - основная директория проекта с приложениями _api_, _reviews_ , _users_.
-
-
-  `manage.py` - основной файл для управления проектом.
-
-
-  `README.md` - файл с документацией.
-
-
-  `tests/` - директория с тестами.
-
-
-  `postman_collection/` - директория с тестами HTTP запросов к API для программы Postman.
-
-</p>
-</details>
 
 ## Установка и запуск проекта
 
@@ -98,22 +77,107 @@ Django Rest Famework 3.12.4
   ```bash
   python ./api_yamdb/manage.py runserver
   ```
-</p>
+
 </details>
 
 ***
+
+## Импорт данных из CSV файлов в базу данных
+
+<details>
+  <summary><b<strong>Использование импорта данных</strong></b></summary>
+
+Для импорта данных в базу данных из CSV файлов, используйте команду `import_data`.     
+Эта команда позволяет импортировать данные из следующих файлов:
+```
+users.csv    
+titles.csv    
+category.csv    
+genre.csv     
+genre_title.csv    
+review.csv    
+comments.csv
+```
+
+### Шаги для использования команды `import_data`     
+***     
+### Подготовьте CSV файлы
+Убедитесь, что файлы `users.csv`, `titles.csv`, `category.csv`, `genre.csv`, `genre_title.csv`, `review.csv` и `comments.csv` находятся в директории `static/data/`.
+<br></br>
+### Запустите команду
+Выполните следующую команду в терминале из корневой директории проекта:
+```bash
+python ./yatube_api/manage.py import_data
+```
+<br></br>
+### Проверьте логирование
+Команда `import_data` будет выводить информацию о процессе импорта в консоль.    
+Убедитесь, что все данные были успешно импортированы.
 <br></br>
 
+### Пример структуры CSV файлов
+```
+users.csv
+id,username,email,password,is_superuser,is_staff,is_active,date_joined,is_registration_complete
+1,johndoe,johndoe@example.com,hashed_password,False,False,True,2023-01-01 00:00:00,True
+```
+
+```
+titles.csv
+id,name,year,description,category_id
+1,Example Title,2023,Description of the title,1
+```
+
+```
+category.csv
+id,name,slug
+1,Category Name,category-slug
+```
+
+```
+genre.csv
+id,name,slug
+1,Genre Name,genre-slug
+```
+
+```
+genre_title.csv
+id,genre_id,title_id
+1,1,1
+```
+
+```
+review.csv
+id,title_id,text,author_id,score,pub_date
+1,1,Review text,1,5,2023-01-01 00:00:00
+```
+
+```
+comments.csv
+id,review_id,text,author_id,pub_date
+1,1,Comment text,1,2023-01-01 00:00:00
+```
+<br></br>
+
+### Примечания
+Убедитесь, что все необходимые поля присутствуют в CSV файлах.    
+Если какие-либо поля отсутствуют, команда `import_data` автоматически заполнит их значениями по умолчанию.    
+В случае ошибок, информация об ошибках будет выведена в консоль.    
+</details>
 
 
+
+
+***
 **Авторы** -
 
 Алексеев Алексей (Vismar)    
 Дамир Шарафетдинов (pretype)    
 Никита Худяков (TrueDmitrich)    
 
-_Студенты 11-когорты бэкенд-факультета   Яндекс Практикум_         
-**Курс** - Python-разработчик буткемп       
+_Студенты 11-когорты бэкенд-факультета   Яндекс Практикум_    
+**Курс** - Python-разработчик буткемп    
 
 
-07/09/2024 - Сдача первой работающей версии проекта   
+07/09/2024 - Сдача первой работающей версии проекта    
+08/09/2024 - Сдача второй версии проекта после правок Ревью 1
