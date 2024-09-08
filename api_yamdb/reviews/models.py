@@ -19,7 +19,7 @@ from .constants import (
     ADMIN,
     ROLE_CHOICES
 )
-from .validators import validate_year, ValidateUsername
+from .validators import validate_year, validate_username
 
 
 class User(AbstractUser):
@@ -27,8 +27,7 @@ class User(AbstractUser):
     username = models.CharField(
         max_length=MAX_LENGTH_USERNAME,
         unique=True,
-        validators=[ValidateUsername()],
-        verbose_name='Юзернэйм'
+        validators=[validate_username],
     )
     email = models.EmailField(
         max_length=MAX_LENGTH_EMAIL,

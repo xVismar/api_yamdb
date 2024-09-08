@@ -12,13 +12,10 @@ MAX_LENGTH_LAST_NAME = 150
 USER = 'user'
 MODERATOR = 'moderator'
 ADMIN = 'admin'
-LOCALIZED_USER = 'Пользователь'
-LOCALIZED_MODERATOR = 'Модератор'
-LOCALIZED_ADMIN = 'Админ'
 ROLE_CHOICES = [
-    (USER, LOCALIZED_USER),
-    (MODERATOR, LOCALIZED_MODERATOR),
-    (ADMIN, LOCALIZED_ADMIN),
+    (USER, 'Пользователь'),
+    (MODERATOR, 'Модератор'),
+    (ADMIN, 'Админ'),
 ]
 
 MIN_VALUE_SCORE = 1

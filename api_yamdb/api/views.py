@@ -1,15 +1,20 @@
-from random import randint, sample
+from datetime import timedelta
+from random import sample
 
 from django.conf import settings
+from django.core.cache import cache
 from django.core.mail import send_mail
-from django.db import IntegrityError
 from django.db.models import Avg
 from django.shortcuts import get_object_or_404
+from django.utils import timezone
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import filters, mixins, permissions, status, viewsets
-from rest_framework.decorators import action, api_view, permission_classes
+from rest_framework.decorators import (
+    action, api_view, permission_classes, throttle_classes
+)
 from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
+from rest_framework.throttling import UserRateThrottle
 from rest_framework_simplejwt.tokens import AccessToken
 
 from api.filters import TitleFilter
@@ -25,31 +30,27 @@ from api.serializers import (
 from reviews.models import Category, Genre, Review, Title, User
 
 
-class BaseCRDViewset(
+class BaseCRDSlugSeachViewset(
     viewsets.GenericViewSet,
     mixins.CreateModelMixin,
     mixins.ListModelMixin,
     mixins.DestroyModelMixin
 ):
-
     permission_classes = (ReadOnlyOrAdmin,)
     filter_backends = (filters.SearchFilter,)
     search_fields = ('name',)
     lookup_field = 'slug'
     http_method_names = ['get', 'post', 'patch', 'delete']
 
-    def retrieve(self, request, *args, **kwargs):
-        return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
 
-
-class GenreViewSet(BaseCRDViewset):
+class GenreViewSet(BaseCRDSlugSeachViewset):
     """Представление жанра."""
 
     serializer_class = GenreSerializer
     queryset = Genre.objects.all()
 
 
-class CategoryViewSet(BaseCRDViewset):
+class CategoryViewSet(BaseCRDSlugSeachViewset):
     """Представление категории."""
 
     serializer_class = CategorySerializer
@@ -168,20 +169,25 @@ class UserViewSet(viewsets.ModelViewSet):
 
 @api_view(['POST'])
 @permission_classes([permissions.AllowAny])
+@throttle_classes([UserRateThrottle])
 def obtain_jwt_view(request):
     serializer = ObtainJWTSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
     username = request.data.get('username')
     confirmation_code = request.data.get('confirmation_code')
-    try:
-        user = get_object_or_404(User, username=username)
-    except User.DoesNotExist:
-        raise ValidationError('Пользователь не найден.')
+    user = get_object_or_404(User, username=username)
+    cache_key = f"confirmation_attempts_{username}"
+    attempts = cache.get(cache_key, 0)
+    if attempts >= settings.MAX_RETRY_ATTEMPTS:
+        raise ValidationError(
+            'Превышено количество попыток. Попробуйте позже.'
+        )
     if user.confirmation_code != confirmation_code:
+        cache.set(cache_key, attempts + 1, settings.RETRY_TIMEOUT)
         raise ValidationError(
             'Неверный код подтверждения. Запросите код ещё раз.'
         )
-    user.is_registration_complete = True
+    cache.delete(cache_key)
     user.save()
     return Response(
         {'token': str(AccessToken.for_user(user))}, status=status.HTTP_200_OK
@@ -190,44 +196,48 @@ def obtain_jwt_view(request):
 
 @api_view(['POST'])
 @permission_classes([permissions.AllowAny])
+@throttle_classes([UserRateThrottle])
 def sign_up_view(request):
     serializer = SignUpSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
     email = request.data.get('email')
     username = request.data.get('username')
-    try:
-        user, created = User.objects.get_or_create(
-            username=username,
-            email=email
-        )
-        if not created:
-            return Response(serializer.data, status=status.HTTP_200_OK)
-    except IntegrityError:
-        field = (
-            'username' if User.objects.filter(username=username).exists()
-            else 'email'
-        )
-        raise ValidationError(f'{field} уже зарегистрирован!')
-    user.confirmation_code = make_confirmation_code()
-    user.save()
-    pin_code = str(randint(1000, 9999))
-    request.session['pin_code'] = pin_code
-    send_confirmation_code(user)
-    return Response(serializer.data, status=status.HTTP_200_OK)
-
-
-@api_view(['POST'])
-@permission_classes([permissions.AllowAny])
-def resend_confirmation_code_view(request):
-    pin_code = request.data.get('pin_code')
-    if pin_code and pin_code == request.session.get('pin_code'):
-        email = request.data.get('email')
-        username = request.data.get('username')
-        user = get_object_or_404(User, username=username, email=email)
+    user = User.objects.filter(email=email, username=username).first()
+    if user:
+        if user.confirmation_code:
+            minutes = settings.CONFIRMATION_CODE_LIFETIME
+            time_since_last_code = timezone.now() - user.date_joined
+            if time_since_last_code < timedelta(minutes):
+                return Response(
+                    {
+                        'detail': 'Код подтверждения уже был отправлен. '
+                        'Пожалуйста, проверьте вашу почту или подождите '
+                        'несколько минут.'
+                    },
+                    status=status.HTTP_200_OK
+                )
+        user.confirmation_code = make_confirmation_code()
+        user.save()
         send_confirmation_code(user)
         return Response(
-            {'message': 'Код подтверждения был отправлен повторно.'},
+            {'detail': 'Новый код подтверждения был отправлен на вашу почту.'},
             status=status.HTTP_200_OK
         )
-    else:
-        raise ValidationError('Неверный пин-код.')
+    if User.objects.filter(email=email).exists():
+        raise ValidationError('Email уже зарегистрирован!')
+    if User.objects.filter(username=username).exists():
+        user = get_object_or_404(User, username=username)
+        if user.email != email:
+            raise ValidationError(
+                'Username уже зарегистрирован с другим email!'
+            )
+    user, created = User.objects.get_or_create(
+        username=username,
+        email=email
+    )
+    if not created:
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    user.confirmation_code = make_confirmation_code()
+    user.save()
+    send_confirmation_code(user)
+    return Response(serializer.data, status=status.HTTP_200_OK)

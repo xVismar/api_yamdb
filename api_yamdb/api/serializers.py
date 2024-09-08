@@ -8,7 +8,7 @@ from reviews.constants import (
     MAX_LENGTH_EMAIL, MAX_LENGTH_USERNAME, MAX_VALUE_SCORE, MIN_VALUE_SCORE
 )
 from reviews.models import Category, Comment, Genre, Review, Title, User
-from reviews.validators import ValidateUsername, validate_year
+from reviews.validators import validate_username, validate_year
 
 
 class GenreSerializer(serializers.ModelSerializer):
@@ -36,7 +36,9 @@ class TitleReadSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Title
-        fields = '__all__'
+        fields = (
+            'id', 'name', 'year', 'description', 'genre', 'category', 'rating'
+        )
         read_only_fields = ('__all__',)
 
 
@@ -54,12 +56,12 @@ class TitleWriteSerializer(serializers.ModelSerializer):
     )
     year = serializers.IntegerField(validators=[validate_year])
     rating = serializers.IntegerField(required=False)
-    name = serializers.CharField(max_length=255)
-    description = serializers.CharField(required=False, allow_blank=True)
 
     class Meta:
         model = Title
-        fields = '__all__'
+        fields = (
+            'id', 'name', 'year', 'description', 'genre', 'category', 'rating'
+        )
 
 
 class ReviewSerializer(serializers.ModelSerializer):
@@ -107,7 +109,7 @@ class CommentSerializer(serializers.ModelSerializer):
         fields = ('id', 'text', 'author', 'pub_date')
 
 
-class UserSerializer(serializers.ModelSerializer, ValidateUsername):
+class UserSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
@@ -127,23 +129,25 @@ class UserProfileSerializer(UserSerializer):
         read_only_fields = ('role',)
 
 
-class SignUpSerializer(serializers.Serializer, ValidateUsername):
+class SignUpSerializer(serializers.Serializer):
     email = serializers.EmailField(
         max_length=MAX_LENGTH_EMAIL,
         required=True
     )
     username = serializers.CharField(
         max_length=MAX_LENGTH_USERNAME,
-        required=True
+        required=True,
+        validators=[validate_username]
     )
 
 
-class ObtainJWTSerializer(serializers.Serializer, ValidateUsername):
+class ObtainJWTSerializer(serializers.Serializer):
     confirmation_code = serializers.CharField(
         max_length=settings.MAX_LENGTH_CONFIRMATION_CODE,
         required=True
     )
     username = serializers.CharField(
         max_length=MAX_LENGTH_USERNAME,
-        required=True
+        required=True,
+        validators=[validate_username]
     )

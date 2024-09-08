@@ -5,7 +5,6 @@ from rest_framework.routers import DefaultRouter
 from .views import (
     CategoryViewSet, GenreViewSet, ReviewViewSet, TitleViewSet,
     CommentViewSet, UserViewSet, obtain_jwt_view, sign_up_view,
-    resend_confirmation_code_view
 )
 
 app_name = 'api'
@@ -30,12 +29,6 @@ router_v1.register('users', UserViewSet, basename='users')
 auth_url_patterns = [
     path('signup/', sign_up_view),
     path('token/', obtain_jwt_view),
-    path(
-        'resend-confirmation-code/',
-        resend_confirmation_code_view,
-        name='resend_confirmation_code'
-    ),
-
 ]
 
 
