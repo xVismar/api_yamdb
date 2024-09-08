@@ -1,13 +1,14 @@
-
 from django.conf import settings
+from django.core.validators import MaxValueValidator, MinValueValidator
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from rest_framework.relations import SlugRelatedField
-from reviews.validators import ValidateUsername, validate_year
+
 from reviews.constants import (
     MAX_LENGTH_EMAIL, MAX_LENGTH_USERNAME, MAX_VALUE_SCORE, MIN_VALUE_SCORE
 )
 from reviews.models import Category, Comment, Genre, Review, Title, User
+from reviews.validators import ValidateUsername, validate_year
 
 
 class GenreSerializer(serializers.ModelSerializer):
@@ -35,12 +36,11 @@ class TitleReadSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Title
-        fields = ('id', 'name', 'year', 'description',
-                  'genre', 'category', 'rating')
+        fields = '__all__'
         read_only_fields = ('__all__',)
 
 
-class TitleModificateSerializer(serializers.ModelSerializer):
+class TitleWriteSerializer(serializers.ModelSerializer):
     """Сериализатор произведений под небезопасные запросы."""
 
     genre = serializers.SlugRelatedField(
@@ -53,10 +53,13 @@ class TitleModificateSerializer(serializers.ModelSerializer):
         queryset=Category.objects.all()
     )
     year = serializers.IntegerField(validators=[validate_year])
+    rating = serializers.IntegerField(required=False)
+    name = serializers.CharField(max_length=255)
+    description = serializers.CharField(required=False, allow_blank=True)
 
     class Meta:
         model = Title
-        fields = ('id', 'name', 'year', 'description', 'genre', 'category')
+        fields = '__all__'
 
 
 class ReviewSerializer(serializers.ModelSerializer):
@@ -67,14 +70,19 @@ class ReviewSerializer(serializers.ModelSerializer):
         read_only=True,
         default=serializers.CurrentUserDefault()
     )
+    score = serializers.IntegerField(
+        validators=[
+            MinValueValidator(MIN_VALUE_SCORE),
+            MaxValueValidator(MAX_VALUE_SCORE)
+        ]
+    )
 
     class Meta:
         model = Review
-        fields = ('id', 'title', 'text', 'author', 'score', 'pub_date')
-        read_only_fields = ('pub_date', 'title', 'id')
+        fields = ('id', 'text', 'author', 'score', 'pub_date')
 
     def validate(self, attrs):
-        """Проверка оценки и уникальности отзыва."""
+        """Проверка уникальности отзыва."""
         request = self.context.get('request')
         if (
             request and request.method == 'POST' and Review.objects.filter(
@@ -84,22 +92,13 @@ class ReviewSerializer(serializers.ModelSerializer):
             raise ValidationError(
                 'Вы уже оставляли отзыв на это произведение.'
             )
-        score = attrs.get('score')
-        return (
-            attrs if score is not None
-            and MIN_VALUE_SCORE <= score <= MAX_VALUE_SCORE
-            else ValidationError(
-                f'Оценка должна быть в пределах от {MIN_VALUE_SCORE} до '
-                f'{MAX_VALUE_SCORE}!'
-            )
-        )
+        return attrs
 
 
 class CommentSerializer(serializers.ModelSerializer):
     """Сериализатор комментария."""
 
     author = SlugRelatedField(slug_field='username', read_only=True)
-    text = serializers.CharField(required=True)
 
     class Meta:
         """Класс с метаданными модели комментария."""
@@ -125,7 +124,6 @@ class UserSerializer(serializers.ModelSerializer, ValidateUsername):
 class UserProfileSerializer(UserSerializer):
 
     class Meta(UserSerializer.Meta):
-        fields = '__all__'
         read_only_fields = ('role',)
 
 

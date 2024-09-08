@@ -51,13 +51,27 @@ class UserAdmin(admin.ModelAdmin):
     readonly_fields = ('date_joined', 'last_login')
     fieldsets = (
         (None, {
-            'fields': ('username', 'password')
+            'fields': (
+                'username',
+                'password'
+            )
         }),
         ('Personal info', {
-            'fields': ('first_name', 'last_name', 'email', 'bio')
+            'fields': (
+                'first_name',
+                'last_name',
+                'email',
+                'bio'
+            )
         }),
         ('Permissions', {
-            'fields': ('is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions')
+            'fields': (
+                'is_active',
+                'is_staff',
+                'is_superuser',
+                'groups',
+                'user_permissions'
+            )
         }),
         ('Important dates', {
             'fields': ('last_login', 'date_joined')
@@ -67,6 +81,7 @@ class UserAdmin(admin.ModelAdmin):
             'classes': ('collapse',)
         }),
     )
+
 
 @admin.register(Comment)
 class CommentAdmin(admin.ModelAdmin):

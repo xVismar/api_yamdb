@@ -1,4 +1,4 @@
-from random import sample
+from random import randint, sample
 
 from django.conf import settings
 from django.core.mail import send_mail
@@ -6,12 +6,11 @@ from django.db import IntegrityError
 from django.db.models import Avg
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework import filters, generics, status, permissions, viewsets
-from rest_framework.decorators import action
+from rest_framework import filters, mixins, permissions, status, viewsets
+from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import AccessToken
-from random import randint
 
 from api.filters import TitleFilter
 from api.permissions import (
@@ -20,39 +19,17 @@ from api.permissions import (
 from api.serializers import (
     CategorySerializer, CommentSerializer, GenreSerializer,
     ObtainJWTSerializer, ReviewSerializer, SignUpSerializer,
-    TitleModificateSerializer, TitleReadSerializer, UserProfileSerializer,
+    TitleReadSerializer, TitleWriteSerializer, UserProfileSerializer,
     UserSerializer
 )
 from reviews.models import Category, Genre, Review, Title, User
-from rest_framework import viewsets
-
-from django.shortcuts import get_object_or_404
-from django.db import IntegrityError
-from rest_framework import status, permissions
-from rest_framework.decorators import api_view, permission_classes
-from rest_framework.response import Response
-from rest_framework.exceptions import ValidationError
-from rest_framework_simplejwt.tokens import AccessToken
-
-from api.serializers import ObtainJWTSerializer, SignUpSerializer
-from reviews.models import User
-
-
-
-# class CRDSlugSearchViewSet(
-#     mixins.ListModelMixin,
-#     mixins.CreateModelMixin,
-#     mixins.DestroyModelMixin,
-#     viewsets.GenericViewSet
-# ):
-#     filter_backends = (SearchFilter,)
-#     lookup_field = 'slug'
-#     search_fields = ('name',)
-#     permission_classes = (ReadOnlyOrAdmin,)
 
 
 class BaseCRDViewset(
-    viewsets.ViewSetMixin, generics.ListCreateAPIView, generics.DestroyAPIView
+    viewsets.GenericViewSet,
+    mixins.CreateModelMixin,
+    mixins.ListModelMixin,
+    mixins.DestroyModelMixin
 ):
 
     permission_classes = (ReadOnlyOrAdmin,)
@@ -63,17 +40,6 @@ class BaseCRDViewset(
 
     def retrieve(self, request, *args, **kwargs):
         return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
-
-# class BaseCreateViewSet(viewsets.ModelViewSet):
-
-#     def create(self, request, *args, **kwargs):
-#         serializer = self.get_serializer(data=request.data)
-#         serializer.is_valid(raise_exception=True)
-#         self.perform_create(serializer)
-#         headers = self.get_success_headers(serializer.data)
-#         return Response(
-#             serializer.data, status=status.HTTP_201_CREATED, headers=headers
-#         )
 
 
 class GenreViewSet(BaseCRDViewset):
@@ -104,16 +70,7 @@ class TitleViewSet(viewsets.ModelViewSet):
     def get_serializer_class(self):
         if self.request.method in permissions.SAFE_METHODS:
             return TitleReadSerializer
-        return TitleModificateSerializer
-
-    # def perform_create(self, serializer):
-    #     """Создает новый объект Title и возвращает статус 201."""
-    #     serializer.is_valid(raise_exception=True)
-    #     serializer.save()
-
-    # def perform_update(self, serializer):
-    #     serializer.is_valid(raise_exception=True)
-    #     serializer.save()
+        return TitleWriteSerializer
 
 
 class ReviewViewSet(viewsets.ModelViewSet):
@@ -196,7 +153,7 @@ class UserViewSet(viewsets.ModelViewSet):
     )
     def profile(self, request):
         """Представление профиля текущего пользователя."""
-        if not request.method == 'PATCH':
+        if request.method != 'PATCH':
             return Response(
                 UserProfileSerializer(request.user).data,
                 status=status.HTTP_200_OK
@@ -216,19 +173,19 @@ def obtain_jwt_view(request):
     serializer.is_valid(raise_exception=True)
     username = request.data.get('username')
     confirmation_code = request.data.get('confirmation_code')
-
     try:
         user = get_object_or_404(User, username=username)
     except User.DoesNotExist:
         raise ValidationError('Пользователь не найден.')
-
     if user.confirmation_code != confirmation_code:
-        raise ValidationError('Неверный код подтверждения. Запросите код ещё раз.')
-
+        raise ValidationError(
+            'Неверный код подтверждения. Запросите код ещё раз.'
+        )
     user.is_registration_complete = True
     user.save()
-
-    return Response({'token': str(AccessToken.for_user(user))}, status=status.HTTP_200_OK)
+    return Response(
+        {'token': str(AccessToken.for_user(user))}, status=status.HTTP_200_OK
+    )
 
 
 @api_view(['POST'])
@@ -238,7 +195,6 @@ def sign_up_view(request):
     serializer.is_valid(raise_exception=True)
     email = request.data.get('email')
     username = request.data.get('username')
-
     try:
         user, created = User.objects.get_or_create(
             username=username,

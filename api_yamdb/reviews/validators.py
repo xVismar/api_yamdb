@@ -1,5 +1,6 @@
 import re
 from datetime import date
+
 from django.core.exceptions import ValidationError
 from django.conf import settings
 from django.utils.deconstruct import deconstructible
@@ -26,10 +27,9 @@ class ValidateUsername:
             )
         matching_chars = re.findall(r'[^\w.@+-]+', username)
         if matching_chars:
-            ''.join(set(matching_chars))
             raise ValidationError(
                 f'Поле \'username\' содержит '
-                f'недопустимые символы: {set(matching_chars)}'
+                f'недопустимые символы: {", ".join(set(matching_chars))}'
             )
         return username
 

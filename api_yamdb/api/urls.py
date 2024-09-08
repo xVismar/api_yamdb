@@ -2,7 +2,7 @@
 from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 
-from api.views import (
+from .views import (
     CategoryViewSet, GenreViewSet, ReviewViewSet, TitleViewSet,
     CommentViewSet, UserViewSet, obtain_jwt_view, sign_up_view,
     resend_confirmation_code_view
@@ -38,11 +38,8 @@ auth_url_patterns = [
 
 ]
 
-api_version_url_patterns = [
-    path('', include(router_v1.urls)),
-    path('auth/', include(auth_url_patterns)),
-]
 
 urlpatterns = [
-    path('v1/', include(api_version_url_patterns)),
+    path('v1/', include(router_v1.urls)),
+    path('v1/auth/', include(auth_url_patterns)),
 ]
