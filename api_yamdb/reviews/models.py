@@ -68,6 +68,10 @@ class User(AbstractUser):
         null=True,
         verbose_name='Код подтверждения'
     )
+    is_registration_complete = models.BooleanField(
+        default=False,
+        verbose_name='Регистрация завершена'
+    )
 
     class Meta:
         ordering = ('username',)
@@ -81,10 +85,6 @@ class User(AbstractUser):
     @property
     def is_moderator(self):
         return self.role == MODERATOR
-
-    @property
-    def is_user(self):
-        return self.role == USER
 
     def __str__(self):
         return self.username

@@ -1,25 +1,13 @@
-from rest_framework import serializers
-from rest_framework.relations import SlugRelatedField
-from reviews.models import Category, Genre, Review, Title, Comment
-from django.contrib.auth import get_user_model
-from django.contrib.auth.tokens import default_token_generator
-from rest_framework import serializers
 
-from rest_framework.exceptions import NotFound, ValidationError
 from django.conf import settings
 from rest_framework import serializers
-from api_yamdb.constants import (
-    MAX_LENGTH_EMAIL,
-    MAX_LENGTH_USERNAME,
-    MAX_VALUE_SCORE,
-    MIN_VALUE_SCORE,
-)
-from reviews.models import Category, Genre, Title, Comment, Review, User
+from rest_framework.exceptions import ValidationError
+from rest_framework.relations import SlugRelatedField
+
 from api.validators import ValidateUsername, validate_year
-from django.utils import timezone
-
-
-User = get_user_model()
+from api_yamdb.constants import (MAX_LENGTH_EMAIL, MAX_LENGTH_USERNAME,
+                                 MAX_VALUE_SCORE, MIN_VALUE_SCORE)
+from reviews.models import Category, Comment, Genre, Review, Title, User
 
 
 class GenreSerializer(serializers.ModelSerializer):
@@ -52,7 +40,6 @@ class TitleReadSerializer(serializers.ModelSerializer):
         read_only_fields = ('__all__',)
 
 
-
 class TitleModificateSerializer(serializers.ModelSerializer):
     """Сериализатор произведений под небезопасные запросы."""
 
@@ -65,22 +52,16 @@ class TitleModificateSerializer(serializers.ModelSerializer):
         slug_field='slug',
         queryset=Category.objects.all()
     )
+    year = serializers.IntegerField(validators=[validate_year])
 
     class Meta:
         model = Title
         fields = ('id', 'name', 'year', 'description', 'genre', 'category')
 
-    def validate_year(self, data):
-        """Валидация года."""
-        if data not in range(timezone.now().year + 1):
-            raise serializers.ValidationError(
-                'Указание не наступившего года запрещено!'
-            )
-        return data
-
 
 class ReviewSerializer(serializers.ModelSerializer):
     """Сериализатор отзыва."""
+
     author = serializers.SlugRelatedField(
         slug_field='username',
         read_only=True,
@@ -92,38 +73,42 @@ class ReviewSerializer(serializers.ModelSerializer):
         fields = ('id', 'title', 'text', 'author', 'score', 'pub_date')
         read_only_fields = ('pub_date', 'title', 'id')
 
-
     def validate(self, attrs):
-        """Проверка на уникальность отзыва для пользователя и произведения."""
+        """Проверка оценки и уникальности отзыва."""
         request = self.context.get('request')
-        if request.method == 'POST' and request:
-            title_id = self.context['view'].kwargs['title_id']
-            if Review.objects.filter(
-                author=request.user, title_id=title_id
-            ).exists():
-                raise serializers.ValidationError(
-                    'Вы уже оставляли отзыв на это произведение.'
-                )
-         return attrs
-
-    def score_validator(self, value):
-        if MIN_VALUE_SCORE < value <MAX_VALUE_SCORE:
-            return value
-        return ValidationError(f'Оценка должна быть в пределах от {MIN_VALUE_SCORE} до {MAX_VALUE_SCORE}!')
+        if (
+            request and request.method == 'POST' and Review.objects.filter(
+                author=request.user,
+                title_id=self.context['view'].kwargs['title_id']).exists()
+        ):
+            raise ValidationError(
+                'Вы уже оставляли отзыв на это произведение.'
+            )
+        score = attrs.get('score')
+        return (
+            attrs if score is not None
+            and MIN_VALUE_SCORE <= score <= MAX_VALUE_SCORE
+            else ValidationError(
+                f'Оценка должна быть в пределах от {MIN_VALUE_SCORE} до '
+                f'{MAX_VALUE_SCORE}!'
+            )
+        )
 
 
 class CommentSerializer(serializers.ModelSerializer):
     """Сериализатор комментария."""
 
     author = SlugRelatedField(slug_field='username', read_only=True)
-    title = serializers.SlugRelatedField(slug_field='name', read_only=True)
+    text = serializers.CharField(required=True)
 
     class Meta:
-        model = Comment
+        """Класс с метаданными модели комментария."""
 
-      
+        model = Comment
+        fields = ('id', 'text', 'author', 'pub_date')
+
+
 class UserSerializer(serializers.ModelSerializer, ValidateUsername):
-  
 
     class Meta:
         model = User
@@ -140,6 +125,7 @@ class UserSerializer(serializers.ModelSerializer, ValidateUsername):
 class UserProfileSerializer(UserSerializer):
 
     class Meta(UserSerializer.Meta):
+        fields = '__all__'
         read_only_fields = ('role',)
 
 
@@ -163,5 +149,3 @@ class ObtainJWTSerializer(serializers.Serializer, ValidateUsername):
         max_length=MAX_LENGTH_USERNAME,
         required=True
     )
-
-   

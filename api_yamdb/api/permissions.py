@@ -1,4 +1,3 @@
-from urllib import request
 from rest_framework import permissions
 
 
@@ -22,6 +21,7 @@ class IsAuthorOrModeratorOrReadOnly(permissions.BasePermission):
             else request.user.is_authenticated and request.user.is_admin
             or request.user.is_moderator
         )
+
 
 class ReadOnlyOrAdmin(permissions.BasePermission):
 

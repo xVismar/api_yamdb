@@ -4,14 +4,15 @@ from django.core.exceptions import ValidationError
 from django.conf import settings
 from django.utils.deconstruct import deconstructible
 
+
 def validate_year(year):
 
     if year > date.today().year:
         raise ValidationError(
-            f'Введенный год: "{year}" не может быть больше текущего '
-            f'{date.today().year}.'
+            f'Введенный год "{year}" не может быть больше {date.today().year}.'
         )
     return year
+
 
 @deconstructible
 class ValidateUsername:
