@@ -107,7 +107,7 @@ comments.csv
 ### Запустите команду
 Выполните следующую команду в терминале из корневой директории проекта:
 ```bash
-python ./yatube_api/manage.py import_data
+python ./api_yamdb/manage.py import_data
 ```
 <br></br>
 ### Проверьте логирование
@@ -166,7 +166,12 @@ id,review_id,text,author_id,pub_date
 </details>
 
 
-
+## Документация API
+После запуска проекта 
+```bash
+python ./api_yamdb/manage.py runserver
+```     
+Документация API доступна по следующей ссылке: [API Documentation (redoc)](http://127.0.0.1:8000/redoc/)
 
 ***
 **Авторы** -
