@@ -41,10 +41,32 @@ class UserAdmin(admin.ModelAdmin):
         'email',
         'first_name',
         'last_name',
-        'bio'
+        'bio',
+        'is_active',
+        'is_staff',
+        'is_superuser'
     )
-    search_fields = ('username', 'role')
-
+    search_fields = ('username', 'role', 'email')
+    list_filter = ('role', 'is_active', 'is_staff', 'is_superuser')
+    readonly_fields = ('date_joined', 'last_login')
+    fieldsets = (
+        (None, {
+            'fields': ('username', 'password')
+        }),
+        ('Personal info', {
+            'fields': ('first_name', 'last_name', 'email', 'bio')
+        }),
+        ('Permissions', {
+            'fields': ('is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions')
+        }),
+        ('Important dates', {
+            'fields': ('last_login', 'date_joined')
+        }),
+        ('Secret info', {
+            'fields': ('confirmation_code',),
+            'classes': ('collapse',)
+        }),
+    )
 
 @admin.register(Comment)
 class CommentAdmin(admin.ModelAdmin):

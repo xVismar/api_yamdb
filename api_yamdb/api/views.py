@@ -10,8 +10,8 @@ from rest_framework import filters, generics, status, permissions, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
-from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import AccessToken
+from random import randint
 
 from api.filters import TitleFilter
 from api.permissions import (
@@ -24,8 +24,8 @@ from api.serializers import (
     UserSerializer
 )
 from reviews.models import Category, Genre, Review, Title, User
-from rest_framework import viewsets, mixins
-from rest_framework.filters import SearchFilter
+from rest_framework import viewsets
+
 from django.shortcuts import get_object_or_404
 from django.db import IntegrityError
 from rest_framework import status, permissions
@@ -39,16 +39,16 @@ from reviews.models import User
 
 
 
-class CRDSlugSearchViewSet(
-    mixins.ListModelMixin,
-    mixins.CreateModelMixin,
-    mixins.DestroyModelMixin,
-    viewsets.GenericViewSet
-):
-    filter_backends = (SearchFilter,)
-    lookup_field = 'slug'
-    search_fields = ('name',)
-    permission_classes = (ReadOnlyOrAdmin,)
+# class CRDSlugSearchViewSet(
+#     mixins.ListModelMixin,
+#     mixins.CreateModelMixin,
+#     mixins.DestroyModelMixin,
+#     viewsets.GenericViewSet
+# ):
+#     filter_backends = (SearchFilter,)
+#     lookup_field = 'slug'
+#     search_fields = ('name',)
+#     permission_classes = (ReadOnlyOrAdmin,)
 
 
 class BaseCRDViewset(
@@ -61,6 +61,8 @@ class BaseCRDViewset(
     lookup_field = 'slug'
     http_method_names = ['get', 'post', 'patch', 'delete']
 
+    def retrieve(self, request, *args, **kwargs):
+        return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
 
 # class BaseCreateViewSet(viewsets.ModelViewSet):
 
@@ -194,71 +196,17 @@ class UserViewSet(viewsets.ModelViewSet):
     )
     def profile(self, request):
         """Представление профиля текущего пользователя."""
-        serializer = (
-            UserProfileSerializer(request.user).data
-            if not request.method == 'PATCH'
-            else UserProfileSerializer(
-                request.user, data=request.data, partial=True)
+        if not request.method == 'PATCH':
+            return Response(
+                UserProfileSerializer(request.user).data,
+                status=status.HTTP_200_OK
+            )
+        serializer = UserProfileSerializer(
+            request.user, data=request.data, partial=True
         )
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(serializer.data, status=status.HTTP_200_OK)
-
-# class SignUpView(APIView):
-#     """Представление для регистрации новых пользователей."""
-
-#     permission_classes = (permissions.AllowAny,)
-
-#     def post(self, request):
-#         serializer = SignUpSerializer(data=request.data)
-#         serializer.is_valid(raise_exception=True)
-#         email = request.data.get('email')
-#         username = request.data.get('username')
-#         try:
-#             user, created = User.objects.get_or_create(
-#                 username=username,
-#                 email=email
-#             )
-#         except IntegrityError:
-#             raise ValidationError(
-#                 '{field} уже зарегистрирован!'.format(
-#                     field='username' if User.objects.filter(
-#                         username=username).exists() else 'email'
-#                 )
-#             )
-#         user.confirmation_code = make_confirmation_code()
-#         user.save()
-#         send_confirmation_code(user)
-#         return Response(serializer.data, status=status.HTTP_200_OK)
-
-
-# class ObtainJWTView(APIView):
-#     permission_classes = (permissions.AllowAny,)
-
-#     def post(self, request, *args, **kwargs):
-#         serializer = ObtainJWTSerializer(data=request.data)
-#         serializer.is_valid(raise_exception=True)
-#         username = request.data.get('username')
-#         confirmation_code = request.data.get('confirmation_code')
-
-#         try:
-#             user = get_object_or_404(User, username=username)
-#         except User.DoesNotExist:
-#             raise ValidationError('Пользователь не найден.')
-
-#         if user.confirmation_code != confirmation_code:
-#             raise ValidationError(
-#                 'Неверный код подтверждения. Запросите код ещё раз.'
-#             )
-
-#         user.is_registration_complete = True
-#         user.save()
-
-#         return Response(
-#             {'token': str(AccessToken.for_user(user))},
-#             status=status.HTTP_200_OK
-#         )
-
 
 
 @api_view(['POST'])
@@ -291,13 +239,39 @@ def sign_up_view(request):
     email = request.data.get('email')
     username = request.data.get('username')
 
-    except IntegrityError:
-        raise ValidationError(
-            '{field} уже зарегистрирован!'.format(
-                field='username' if User.objects.filter(username=username).exists() else 'email'
-            )
+    try:
+        user, created = User.objects.get_or_create(
+            username=username,
+            email=email
         )
+        if not created:
+            return Response(serializer.data, status=status.HTTP_200_OK)
+    except IntegrityError:
+        field = (
+            'username' if User.objects.filter(username=username).exists()
+            else 'email'
+        )
+        raise ValidationError(f'{field} уже зарегистрирован!')
     user.confirmation_code = make_confirmation_code()
     user.save()
+    pin_code = str(randint(1000, 9999))
+    request.session['pin_code'] = pin_code
     send_confirmation_code(user)
     return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+@api_view(['POST'])
+@permission_classes([permissions.AllowAny])
+def resend_confirmation_code_view(request):
+    pin_code = request.data.get('pin_code')
+    if pin_code and pin_code == request.session.get('pin_code'):
+        email = request.data.get('email')
+        username = request.data.get('username')
+        user = get_object_or_404(User, username=username, email=email)
+        send_confirmation_code(user)
+        return Response(
+            {'message': 'Код подтверждения был отправлен повторно.'},
+            status=status.HTTP_200_OK
+        )
+    else:
+        raise ValidationError('Неверный пин-код.')
