@@ -12,15 +12,16 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import AccessToken
 
-
 from api.filters import TitleFilter
-from api.permissions import (AdminOnly, IsAuthorOrModeratorOrReadOnly,
-                             ReadOnlyOrAdmin)
-from api.serializers import (CategorySerializer, CommentSerializer,
-                             GenreSerializer, ObtainJWTSerializer,
-                             ReviewSerializer, SignUpSerializer,
-                             TitleReadSerializer, TitleWriteSerializer,
-                             UserProfileSerializer, UserSerializer)
+from api.permissions import (
+    AdminOnly, IsAuthorOrModeratorOrReadOnly, ReadOnlyOrAdmin
+)
+from api.serializers import (
+    CategorySerializer, CommentSerializer, GenreSerializer,
+    ObtainJWTSerializer, ReviewSerializer, SignUpSerializer,
+    TitleReadSerializer, TitleWriteSerializer, UserProfileSerializer,
+    UserSerializer
+)
 from reviews.models import Category, Genre, Review, Title, User
 
 
@@ -169,8 +170,11 @@ def obtain_jwt_view(request):
     username = request.data.get('username')
     user = get_object_or_404(User, username=username)
     if user.confirmation_code != request.data['confirmation_code']:
+        user.confirmation_code = make_confirmation_code()
+        user.save()
+        send_confirmation_code(user)
         raise ValidationError(
-            'Неверный код подтверждения.'
+            'Неверный код подтверждения. Новый код отправлен на вашу почту.'
         )
     return Response(
         {'token': str(AccessToken.for_user(user))}, status=status.HTTP_200_OK
@@ -184,17 +188,30 @@ def sign_up_view(request):
     serializer.is_valid(raise_exception=True)
     email = request.data.get('email')
     username = request.data.get('username')
+    if User.objects.filter(username=username).exists():
+        if not User.objects.filter(email=email).exists():
+            return Response(
+                'Этот ник уже зарегистрирован!',
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        elif (
+            User.objects.filter(email=email).exclude(
+                username=username).exists()
+        ):
+            return Response(
+                'Этот email уже зарегистрирован!',
+                status=status.HTTP_400_BAD_REQUEST
+            )
     try:
         user, created = User.objects.get_or_create(
             username=username,
             email=email
         )
     except IntegrityError:
-        field = (
-            'username' if User.objects.filter(username=username).exists()
-            else 'email'
+        return Response(
+            'Ошибка при создании пользователя!',
+            status=status.HTTP_400_BAD_REQUEST
         )
-        raise ValidationError(f'{field} уже зарегистрирован!')
     user.confirmation_code = make_confirmation_code()
     user.save()
     send_confirmation_code(user)

@@ -1,6 +1,6 @@
 import re
-from datetime import date
 
+from datetime import date
 from django.core.exceptions import ValidationError
 
 
@@ -17,18 +17,13 @@ def validate_year(year):
 
 def validate_username(username):
     """Проверка имени пользователя на соответствие шаблону."""
-    if username.lower() in INVALID_USERNAMES:
+    if username in INVALID_USERNAMES:
         raise ValidationError(
             f'Использовать {username} в качестве ника запрещено!'
         )
-    if any(char in username for char in (',', ' ')):
-        raise ValidationError(
-            'Нельзя использовать "," или пробелы в нике!'
-        )
     matching_chars = re.findall(r'[^\w.@+-]+', username)
     if matching_chars:
-        invalid_chars = ', '.join(set(matching_chars))
+        invalid_chars = ''.join(set(matching_chars))
         raise ValidationError(
             f'Поле "username" содержит недопустимые символы: {invalid_chars}!'
         )
-    return username
