@@ -125,6 +125,11 @@ class UserSerializer(serializers.ModelSerializer):
 
 
 class UserProfileSerializer(UserSerializer):
+    username = serializers.CharField(
+        max_length=MAX_LENGTH_USERNAME,
+        required=True,
+        validators=[validate_username]
+    )
 
     class Meta(UserSerializer.Meta):
         read_only_fields = ('role',)

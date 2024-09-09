@@ -3,8 +3,6 @@ from datetime import date
 
 from django.conf import settings
 from django.core.exceptions import ValidationError
-from rest_framework import status
-from rest_framework.response import Response
 
 
 def validate_year(year):
@@ -17,11 +15,6 @@ def validate_year(year):
 
 def validate_username(username):
     """Проверка имени пользователя на соответствие шаблону."""
-    if username is None:
-        return Response(
-            'Поле "username" не может быть пустым!',
-            status=status.HTTP_400_BAD_REQUEST
-        )
     matching_chars = re.findall(r'^[\w.@+-]', username)
     if username and not matching_chars:
         invalid_chars = ''.join(set(matching_chars))

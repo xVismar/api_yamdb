@@ -1,11 +1,13 @@
+
 import random
 
 from django.conf import settings
 from django.core.mail import send_mail
 from django.db import IntegrityError
 from django.db.models import Avg
-from django_filters.rest_framework import DjangoFilterBackend
 from django.shortcuts import get_object_or_404
+from django.utils import timezone
+from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import filters, mixins, permissions, status, viewsets
 from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.exceptions import ValidationError
@@ -164,34 +166,11 @@ class UserViewSet(viewsets.ModelViewSet):
 
 @api_view(['POST'])
 @permission_classes([permissions.AllowAny])
-def obtain_jwt_view(request):
-    serializer = ObtainJWTSerializer(data=request.data)
-    serializer.is_valid(raise_exception=True)
-    username = request.data.get('username')
-    user = get_object_or_404(User, username=username)
-    if user.confirmation_code != request.data['confirmation_code']:
-        raise ValidationError(
-            'Неверный код подтверждения.'
-        )
-    return Response(
-        {'token': str(AccessToken.for_user(user))}, status=status.HTTP_200_OK
-    )
-
-
-@api_view(['POST'])
-@permission_classes([permissions.AllowAny])
 def sign_up_view(request):
     serializer = SignUpSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
     email = request.data.get('email')
     username = request.data.get('username')
-    if not email or not username:
-        raise ValidationError(
-            {
-                'email': 'Заполните поле "email".',
-                'username': 'Заполните поле "username".'
-            }
-        )
     try:
         user, created = User.objects.get_or_create(
             username=username,
@@ -207,3 +186,35 @@ def sign_up_view(request):
     user.save()
     send_confirmation_code(user)
     return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+@api_view(['POST'])
+@permission_classes([permissions.AllowAny])
+def obtain_jwt_view(request):
+    serializer = ObtainJWTSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+    username = request.data.get('username')
+    user = get_object_or_404(User, username=username)
+    failed_confirmation_attempts = getattr(
+        user, 'failed_confirmation_attempts', 0
+    )
+    if user.confirmation_code != request.data['confirmation_code']:
+        failed_confirmation_attempts += 1
+        user.last_failed_attempt = timezone.now()
+        user.save()
+        if failed_confirmation_attempts >= 3:
+            return Response(
+                'Превышено количество попыток ввода кода подтверждения.'
+                'Попробуйте позже.',
+                status=status.HTTP_429_TOO_MANY_REQUESTS
+            )
+        return Response(
+            'Неверный код подтверждения.',
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    setattr(user, 'failed_confirmation_attempts', 0)
+    user.save()
+    return Response(
+        {'token': str(AccessToken.for_user(user))},
+        status=status.HTTP_200_OK
+    )
