@@ -1,8 +1,7 @@
-from django.core.validators import MaxValueValidator, MinValueValidator
-from django.db import models
+from django.conf import settings
 from django.contrib.auth.models import AbstractUser
 from django.core.validators import MaxValueValidator, MinValueValidator
-from django.conf import settings
+from django.db import models
 
 from .constants import (
     MAX_LENGTH_EMAIL,
@@ -28,6 +27,7 @@ class User(AbstractUser):
         max_length=MAX_LENGTH_USERNAME,
         unique=True,
         validators=[validate_username],
+        verbose_name='Ник'
     )
     email = models.EmailField(
         max_length=MAX_LENGTH_EMAIL,

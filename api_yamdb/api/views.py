@@ -1,32 +1,26 @@
-from datetime import timedelta
-from random import sample
+import random
 
 from django.conf import settings
-from django.core.cache import cache
 from django.core.mail import send_mail
+from django.db import IntegrityError
 from django.db.models import Avg
 from django.shortcuts import get_object_or_404
-from django.utils import timezone
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import filters, mixins, permissions, status, viewsets
-from rest_framework.decorators import (
-    action, api_view, permission_classes, throttle_classes
-)
+from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
-from rest_framework.throttling import UserRateThrottle
 from rest_framework_simplejwt.tokens import AccessToken
 
+
 from api.filters import TitleFilter
-from api.permissions import (
-    AdminOnly, IsAuthorOrModeratorOrReadOnly, ReadOnlyOrAdmin
-)
-from api.serializers import (
-    CategorySerializer, CommentSerializer, GenreSerializer,
-    ObtainJWTSerializer, ReviewSerializer, SignUpSerializer,
-    TitleReadSerializer, TitleWriteSerializer, UserProfileSerializer,
-    UserSerializer
-)
+from api.permissions import (AdminOnly, IsAuthorOrModeratorOrReadOnly,
+                             ReadOnlyOrAdmin)
+from api.serializers import (CategorySerializer, CommentSerializer,
+                             GenreSerializer, ObtainJWTSerializer,
+                             ReviewSerializer, SignUpSerializer,
+                             TitleReadSerializer, TitleWriteSerializer,
+                             UserProfileSerializer, UserSerializer)
 from reviews.models import Category, Genre, Review, Title, User
 
 
@@ -116,11 +110,11 @@ class CommentViewSet(viewsets.ModelViewSet):
 
 
 def make_confirmation_code():
-    return (
-        ''.join(sample(
+    return ''.join(
+        random.choices(
             settings.VALID_CHARS_FOR_CONFIRMATION_CODE,
-            settings.MAX_LENGTH_CONFIRMATION_CODE
-        ))
+            k=settings.MAX_LENGTH_CONFIRMATION_CODE
+        )
     )
 
 
@@ -169,26 +163,15 @@ class UserViewSet(viewsets.ModelViewSet):
 
 @api_view(['POST'])
 @permission_classes([permissions.AllowAny])
-@throttle_classes([UserRateThrottle])
 def obtain_jwt_view(request):
     serializer = ObtainJWTSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
     username = request.data.get('username')
-    confirmation_code = request.data.get('confirmation_code')
     user = get_object_or_404(User, username=username)
-    cache_key = f"confirmation_attempts_{username}"
-    attempts = cache.get(cache_key, 0)
-    if attempts >= settings.MAX_RETRY_ATTEMPTS:
+    if user.confirmation_code != request.data['confirmation_code']:
         raise ValidationError(
-            'Превышено количество попыток. Попробуйте позже.'
+            'Неверный код подтверждения.'
         )
-    if user.confirmation_code != confirmation_code:
-        cache.set(cache_key, attempts + 1, settings.RETRY_TIMEOUT)
-        raise ValidationError(
-            'Неверный код подтверждения. Запросите код ещё раз.'
-        )
-    cache.delete(cache_key)
-    user.save()
     return Response(
         {'token': str(AccessToken.for_user(user))}, status=status.HTTP_200_OK
     )
@@ -196,47 +179,22 @@ def obtain_jwt_view(request):
 
 @api_view(['POST'])
 @permission_classes([permissions.AllowAny])
-@throttle_classes([UserRateThrottle])
 def sign_up_view(request):
     serializer = SignUpSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
     email = request.data.get('email')
     username = request.data.get('username')
-    user = User.objects.filter(email=email, username=username).first()
-    if user:
-        if user.confirmation_code:
-            minutes = settings.CONFIRMATION_CODE_LIFETIME
-            time_since_last_code = timezone.now() - user.date_joined
-            if time_since_last_code < timedelta(minutes):
-                return Response(
-                    {
-                        'detail': 'Код подтверждения уже был отправлен. '
-                        'Пожалуйста, проверьте вашу почту или подождите '
-                        'несколько минут.'
-                    },
-                    status=status.HTTP_200_OK
-                )
-        user.confirmation_code = make_confirmation_code()
-        user.save()
-        send_confirmation_code(user)
-        return Response(
-            {'detail': 'Новый код подтверждения был отправлен на вашу почту.'},
-            status=status.HTTP_200_OK
+    try:
+        user, created = User.objects.get_or_create(
+            username=username,
+            email=email
         )
-    if User.objects.filter(email=email).exists():
-        raise ValidationError('Email уже зарегистрирован!')
-    if User.objects.filter(username=username).exists():
-        user = get_object_or_404(User, username=username)
-        if user.email != email:
-            raise ValidationError(
-                'Username уже зарегистрирован с другим email!'
-            )
-    user, created = User.objects.get_or_create(
-        username=username,
-        email=email
-    )
-    if not created:
-        return Response(serializer.data, status=status.HTTP_200_OK)
+    except IntegrityError:
+        field = (
+            'username' if User.objects.filter(username=username).exists()
+            else 'email'
+        )
+        raise ValidationError(f'{field} уже зарегистрирован!')
     user.confirmation_code = make_confirmation_code()
     user.save()
     send_confirmation_code(user)

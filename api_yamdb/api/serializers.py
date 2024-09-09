@@ -32,7 +32,7 @@ class TitleReadSerializer(serializers.ModelSerializer):
 
     genre = GenreSerializer(many=True)
     category = CategorySerializer()
-    rating = serializers.IntegerField()
+    rating = serializers.IntegerField(required=False)
 
     class Meta:
         model = Title
@@ -62,6 +62,10 @@ class TitleWriteSerializer(serializers.ModelSerializer):
         fields = (
             'id', 'name', 'year', 'description', 'genre', 'category', 'rating'
         )
+
+    def to_representation(self, instance):
+        read_serializer = TitleReadSerializer(instance)
+        return read_serializer.data
 
 
 class ReviewSerializer(serializers.ModelSerializer):
@@ -103,13 +107,16 @@ class CommentSerializer(serializers.ModelSerializer):
     author = SlugRelatedField(slug_field='username', read_only=True)
 
     class Meta:
-        """Класс с метаданными модели комментария."""
-
         model = Comment
         fields = ('id', 'text', 'author', 'pub_date')
 
 
 class UserSerializer(serializers.ModelSerializer):
+    username = serializers.CharField(
+        max_length=MAX_LENGTH_USERNAME,
+        required=True,
+        validators=[validate_username]
+    )
 
     class Meta:
         model = User
@@ -121,6 +128,11 @@ class UserSerializer(serializers.ModelSerializer):
             'bio',
             'role',
         )
+
+    def validate_username(self, value):
+        if User.objects.filter(username=value).exists():
+            raise serializers.ValidationError('Ник уже зарегистрирован.')
+        return value
 
 
 class UserProfileSerializer(UserSerializer):
