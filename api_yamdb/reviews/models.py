@@ -4,19 +4,10 @@ from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 
 from .constants import (
-    MAX_LENGTH_EMAIL,
-    MAX_LENGTH_FIRST_NAME,
-    MAX_LENGTH_STR,
-    MAX_LENGTH_LAST_NAME,
-    MAX_LENGTH_NAME,
-    MAX_LENGTH_SLUG,
-    MAX_LENGTH_USERNAME,
-    MAX_VALUE_SCORE,
-    MIN_VALUE_SCORE,
-    USER,
-    MODERATOR,
-    ADMIN,
-    ROLE_CHOICES
+    MAX_LENGTH_EMAIL, MAX_LENGTH_FIRST_NAME, MAX_LENGTH_STR,
+    MAX_LENGTH_LAST_NAME, MAX_LENGTH_NAME, MAX_LENGTH_SLUG,
+    MAX_LENGTH_USERNAME, MAX_VALUE_SCORE, MIN_VALUE_SCORE, USER, MODERATOR,
+    ADMIN, ROLE_CHOICES
 )
 from .validators import validate_year, validate_username
 
@@ -26,7 +17,7 @@ class User(AbstractUser):
     username = models.CharField(
         max_length=MAX_LENGTH_USERNAME,
         unique=True,
-        validators=[validate_username],
+        validators=(validate_username,),
         verbose_name='Ник'
     )
     email = models.EmailField(

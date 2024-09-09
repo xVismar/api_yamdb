@@ -1,7 +1,5 @@
 from django.conf import settings
-from django.core.validators import (
-    MaxValueValidator, MinValueValidator, RegexValidator
-)
+from django.core.validators import MaxValueValidator, MinValueValidator
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from rest_framework.relations import SlugRelatedField
@@ -113,13 +111,6 @@ class CommentSerializer(serializers.ModelSerializer):
 
 
 class UserSerializer(serializers.ModelSerializer):
-    username = serializers.CharField(
-        max_length=MAX_LENGTH_USERNAME,
-        required=True,
-        validators=[RegexValidator(
-            regex=r'^[\w.@+-]+$',
-            message='Имя пользователя содержит недопустимый символ')]
-    )
 
     class Meta:
         model = User
@@ -131,14 +122,6 @@ class UserSerializer(serializers.ModelSerializer):
             'bio',
             'role',
         )
-
-    def validate(self, data):
-        username = data.get('username')
-        if User.objects.filter(username=username).exists():
-            raise serializers.ValidationError(
-                "Этот никик уже зарегистрирован."
-            )
-        return data
 
 
 class UserProfileSerializer(UserSerializer):

@@ -4,8 +4,8 @@ from django.conf import settings
 from django.core.mail import send_mail
 from django.db import IntegrityError
 from django.db.models import Avg
-from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
+from django.shortcuts import get_object_or_404
 from rest_framework import filters, mixins, permissions, status, viewsets
 from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.exceptions import ValidationError
@@ -170,11 +170,8 @@ def obtain_jwt_view(request):
     username = request.data.get('username')
     user = get_object_or_404(User, username=username)
     if user.confirmation_code != request.data['confirmation_code']:
-        user.confirmation_code = make_confirmation_code()
-        user.save()
-        send_confirmation_code(user)
         raise ValidationError(
-            'Неверный код подтверждения. Новый код отправлен на вашу почту.'
+            'Неверный код подтверждения.'
         )
     return Response(
         {'token': str(AccessToken.for_user(user))}, status=status.HTTP_200_OK
@@ -188,30 +185,24 @@ def sign_up_view(request):
     serializer.is_valid(raise_exception=True)
     email = request.data.get('email')
     username = request.data.get('username')
-    if User.objects.filter(username=username).exists():
-        if not User.objects.filter(email=email).exists():
-            return Response(
-                'Этот ник уже зарегистрирован!',
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        elif (
-            User.objects.filter(email=email).exclude(
-                username=username).exists()
-        ):
-            return Response(
-                'Этот email уже зарегистрирован!',
-                status=status.HTTP_400_BAD_REQUEST
-            )
+    if not email or not username:
+        raise ValidationError(
+            {
+                'email': 'Заполните поле "email".',
+                'username': 'Заполните поле "username".'
+            }
+        )
     try:
         user, created = User.objects.get_or_create(
             username=username,
             email=email
         )
     except IntegrityError:
-        return Response(
-            'Ошибка при создании пользователя!',
-            status=status.HTTP_400_BAD_REQUEST
+        field = (
+            username if User.objects.filter(username=username).exists()
+            else email
         )
+        raise ValidationError(f'{field} уже зарегистрирован!')
     user.confirmation_code = make_confirmation_code()
     user.save()
     send_confirmation_code(user)
