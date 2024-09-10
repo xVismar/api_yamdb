@@ -190,7 +190,7 @@ def obtain_jwt_view(request):
     username = request.data.get('username')
     user = get_object_or_404(User, username=username)
     if user.confirmation_code != request.data['confirmation_code']:
-        if settings.INVALID_CONFIRMATION_CODE not in user.confirmation_code:
+        if user.confirmation_code != settings.INVALID_CONFIRMATION_CODE:
             user.confirmation_code = settings.INVALID_CONFIRMATION_CODE
             user.save()
         raise ValidationError('Неверный код подтверждения.')
