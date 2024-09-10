@@ -179,12 +179,10 @@ def sign_up_view(request):
             else username
         )
         raise ValidationError(f'{field} уже зарегистрирован!')
-
-    return (
-        make_and_send_confirmation_code(user, serializer)
-        if "CODE ACCEPTED" not in str(user.confirmation_code) or created
-        else ValidationError('Пользователь уже зарегистрирован')
-    )
+    if not created:
+        if user.confirmation_code == settings.INVALID_CONFIRMATION_CODE:
+            raise ValidationError('Пользователь уже зарегистрирован.')
+    return make_and_send_confirmation_code(user, serializer)
 
 
 @api_view(['POST'])
@@ -194,13 +192,9 @@ def obtain_jwt_view(request):
     serializer.is_valid(raise_exception=True)
     username = request.data.get('username')
     user = get_object_or_404(User, username=username)
-    user.confirmation_code += (
-        "CODE INVALID"
-        if user.confirmation_code != request.data['confirmation_code']
-        else "CODE ACCEPTED"
-    )
-    user.save()
-    if "CODE INVALID" in str(user.confirmation_code):
+    if user.confirmation_code != request.data['confirmation_code']:
+        user.confirmation_code = settings.INVALID_CONFIRMATION_CODE
+        user.save()
         raise ValidationError('Неверный код подтверждения.')
     return Response(
         {'token': str(AccessToken.for_user(user))},

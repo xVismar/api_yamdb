@@ -112,10 +112,6 @@ class CommentSerializer(serializers.ModelSerializer):
 
 
 class UserSerializer(serializers.ModelSerializer):
-    username = serializers.CharField(
-        max_length=MAX_LENGTH_USERNAME,
-        required=True
-    )
 
     class Meta:
         model = User
@@ -129,8 +125,6 @@ class UserSerializer(serializers.ModelSerializer):
         )
 
     def validate_username(self, username):
-        if User.objects.filter(username=username).exists():
-            raise serializers.ValidationError(f'{username} - уже существует.')
         return validate_username(username)
 
 
