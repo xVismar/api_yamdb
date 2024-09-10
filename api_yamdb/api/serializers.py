@@ -148,12 +148,6 @@ class UserProfileSerializer(BaseUsernameUserSerializer):
         read_only_fields = ('role',)
 
 
-# class UserProfileSerializer(BaseUsernameUserSerializer):
-
-#     class Meta(BaseUsernameUserSerializer.Meta):
-#         read_only_fields = ('role',)
-
-
 class SignUpSerializer(serializers.Serializer):
     email = serializers.EmailField(
         max_length=MAX_LENGTH_EMAIL,
