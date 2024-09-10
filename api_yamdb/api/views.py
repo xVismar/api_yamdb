@@ -115,7 +115,7 @@ def make_and_send_confirmation_code(user, serializer):
     user.confirmation_code = ''.join(
         random.choices(
             settings.VALID_CHARS_FOR_CONFIRMATION_CODE,
-            k=settings.MAX_LENGTH_CONFIRMATION_CODE
+            k=settings.CONFIRMATION_CODE_LENGTH
         )
     )
     user.save()
@@ -179,9 +179,6 @@ def sign_up_view(request):
             else username
         )
         raise ValidationError(f'{field} уже зарегистрирован!')
-    if not created:
-        if user.confirmation_code == settings.INVALID_CONFIRMATION_CODE:
-            raise ValidationError('Пользователь уже зарегистрирован.')
     return make_and_send_confirmation_code(user, serializer)
 
 
@@ -193,8 +190,9 @@ def obtain_jwt_view(request):
     username = request.data.get('username')
     user = get_object_or_404(User, username=username)
     if user.confirmation_code != request.data['confirmation_code']:
-        user.confirmation_code = settings.INVALID_CONFIRMATION_CODE
-        user.save()
+        if settings.INVALID_CONFIRMATION_CODE not in user.confirmation_code:
+            user.confirmation_code = settings.INVALID_CONFIRMATION_CODE
+            user.save()
         raise ValidationError('Неверный код подтверждения.')
     return Response(
         {'token': str(AccessToken.for_user(user))},
