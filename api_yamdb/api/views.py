@@ -1,12 +1,11 @@
 
-import random
+import secrets
 
 from django.conf import settings
 from django.core.mail import send_mail
 from django.db import IntegrityError
 from django.db.models import Avg
 from django.shortcuts import get_object_or_404
-from django.utils import timezone
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import filters, mixins, permissions, status, viewsets
 from rest_framework.decorators import action, api_view, permission_classes
@@ -18,13 +17,13 @@ from api.filters import TitleFilter
 from api.permissions import (
     AdminOnly, IsAuthorOrModeratorOrReadOnly, ReadOnlyOrAdmin
 )
+from reviews.models import Category, Genre, Review, Title, User
 from api.serializers import (
     CategorySerializer, CommentSerializer, GenreSerializer,
     ObtainJWTSerializer, ReviewSerializer, SignUpSerializer,
-    TitleReadSerializer, TitleWriteSerializer, UserProfileSerializer,
-    UserSerializer
+    TitleReadSerializer, TitleWriteSerializer,
+    UserSerializer, UserProfileSerializer
 )
-from reviews.models import Category, Genre, Review, Title, User
 
 
 class BaseCRDSlugSeachViewset(
@@ -112,13 +111,8 @@ class CommentViewSet(viewsets.ModelViewSet):
         )
 
 
-def make_confirmation_code():
-    return ''.join(
-        random.choices(
-            settings.VALID_CHARS_FOR_CONFIRMATION_CODE,
-            k=settings.MAX_LENGTH_CONFIRMATION_CODE
-        )
-    )
+def generate_secure_confirmation_code():
+    return secrets.token_urlsafe(settings.MAX_LENGTH_CONFIRMATION_CODE)
 
 
 def send_confirmation_code(user):
@@ -182,7 +176,7 @@ def sign_up_view(request):
             else email
         )
         raise ValidationError(f'{field} уже зарегистрирован!')
-    user.confirmation_code = make_confirmation_code()
+    user.confirmation_code = generate_secure_confirmation_code()
     user.save()
     send_confirmation_code(user)
     return Response(serializer.data, status=status.HTTP_200_OK)
@@ -195,24 +189,11 @@ def obtain_jwt_view(request):
     serializer.is_valid(raise_exception=True)
     username = request.data.get('username')
     user = get_object_or_404(User, username=username)
-    failed_confirmation_attempts = getattr(
-        user, 'failed_confirmation_attempts', 0
-    )
     if user.confirmation_code != request.data['confirmation_code']:
-        failed_confirmation_attempts += 1
-        user.last_failed_attempt = timezone.now()
-        user.save()
-        if failed_confirmation_attempts >= 3:
-            return Response(
-                'Превышено количество попыток ввода кода подтверждения.'
-                'Попробуйте позже.',
-                status=status.HTTP_429_TOO_MANY_REQUESTS
-            )
         return Response(
             'Неверный код подтверждения.',
             status=status.HTTP_400_BAD_REQUEST
         )
-    setattr(user, 'failed_confirmation_attempts', 0)
     user.save()
     return Response(
         {'token': str(AccessToken.for_user(user))},

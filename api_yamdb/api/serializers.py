@@ -110,10 +110,22 @@ class CommentSerializer(serializers.ModelSerializer):
         fields = ('id', 'text', 'author', 'pub_date')
 
 
-class UserSerializer(serializers.ModelSerializer):
+class BaseUsernameUserSerializer(serializers.ModelSerializer):
+    username = serializers.CharField(
+        max_length=MAX_LENGTH_USERNAME,
+        required=True,
+        validators=[validate_username]
+    )
 
     class Meta:
         model = User
+        fields = '__all__'
+        abstract = True
+
+
+class UserSerializer(BaseUsernameUserSerializer):
+
+    class Meta(BaseUsernameUserSerializer.Meta):
         fields = (
             'username',
             'email',
@@ -123,16 +135,23 @@ class UserSerializer(serializers.ModelSerializer):
             'role',
         )
 
+    def validate_username(self, value):
+        if User.objects.filter(username=value).exists():
+            raise ValidationError('Этот ник уже зарегистрирован.')
+        return value
 
-class UserProfileSerializer(UserSerializer):
-    username = serializers.CharField(
-        max_length=MAX_LENGTH_USERNAME,
-        required=True,
-        validators=[validate_username]
-    )
 
-    class Meta(UserSerializer.Meta):
+class UserProfileSerializer(BaseUsernameUserSerializer):
+
+    class Meta(BaseUsernameUserSerializer.Meta):
+        model = User
         read_only_fields = ('role',)
+
+
+# class UserProfileSerializer(BaseUsernameUserSerializer):
+
+#     class Meta(BaseUsernameUserSerializer.Meta):
+#         read_only_fields = ('role',)
 
 
 class SignUpSerializer(serializers.Serializer):
