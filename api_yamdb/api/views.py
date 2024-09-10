@@ -1,10 +1,10 @@
 
-import secrets
+import random
 
 from django.conf import settings
 from django.core.mail import send_mail
-from django.db import IntegrityError
 from django.db.models import Avg
+from django.db.utils import IntegrityError
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import filters, mixins, permissions, status, viewsets
@@ -111,18 +111,21 @@ class CommentViewSet(viewsets.ModelViewSet):
         )
 
 
-def generate_secure_confirmation_code():
-    return secrets.token_urlsafe(settings.MAX_LENGTH_CONFIRMATION_CODE)
-
-
-def send_confirmation_code(user):
-    """Отправляет код подтверждения на почту пользователя."""
+def make_and_send_confirmation_code(user, serializer):
+    user.confirmation_code = ''.join(
+        random.choices(
+            settings.VALID_CHARS_FOR_CONFIRMATION_CODE,
+            k=settings.MAX_LENGTH_CONFIRMATION_CODE
+        )
+    )
+    user.save()
     send_mail(
         'Код подтверждения',
         f'Ваш код подтверждения: {user.confirmation_code}',
         settings.SENDER_EMAIL,
         [user.email]
     )
+    return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 class UserViewSet(viewsets.ModelViewSet):
@@ -172,14 +175,16 @@ def sign_up_view(request):
         )
     except IntegrityError:
         field = (
-            username if User.objects.filter(username=username).exists()
-            else email
+            email if User.objects.filter(email=email).exists()
+            else username
         )
         raise ValidationError(f'{field} уже зарегистрирован!')
-    user.confirmation_code = generate_secure_confirmation_code()
-    user.save()
-    send_confirmation_code(user)
-    return Response(serializer.data, status=status.HTTP_200_OK)
+
+    return (
+        make_and_send_confirmation_code(user, serializer)
+        if "CODE ACCEPTED" not in str(user.confirmation_code) or created
+        else ValidationError('Пользователь уже зарегистрирован')
+    )
 
 
 @api_view(['POST'])
@@ -189,12 +194,14 @@ def obtain_jwt_view(request):
     serializer.is_valid(raise_exception=True)
     username = request.data.get('username')
     user = get_object_or_404(User, username=username)
-    if user.confirmation_code != request.data['confirmation_code']:
-        return Response(
-            'Неверный код подтверждения.',
-            status=status.HTTP_400_BAD_REQUEST
-        )
+    user.confirmation_code += (
+        "CODE INVALID"
+        if user.confirmation_code != request.data['confirmation_code']
+        else "CODE ACCEPTED"
+    )
     user.save()
+    if "CODE INVALID" in str(user.confirmation_code):
+        raise ValidationError('Неверный код подтверждения.')
     return Response(
         {'token': str(AccessToken.for_user(user))},
         status=status.HTTP_200_OK

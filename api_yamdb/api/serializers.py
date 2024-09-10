@@ -1,3 +1,4 @@
+
 from django.conf import settings
 from django.core.validators import MaxValueValidator, MinValueValidator
 from rest_framework import serializers
@@ -110,22 +111,14 @@ class CommentSerializer(serializers.ModelSerializer):
         fields = ('id', 'text', 'author', 'pub_date')
 
 
-class BaseUsernameUserSerializer(serializers.ModelSerializer):
+class UserSerializer(serializers.ModelSerializer):
     username = serializers.CharField(
         max_length=MAX_LENGTH_USERNAME,
-        required=True,
-        validators=[validate_username]
+        required=True
     )
 
     class Meta:
         model = User
-        fields = '__all__'
-        abstract = True
-
-
-class UserSerializer(BaseUsernameUserSerializer):
-
-    class Meta(BaseUsernameUserSerializer.Meta):
         fields = (
             'username',
             'email',
@@ -135,16 +128,15 @@ class UserSerializer(BaseUsernameUserSerializer):
             'role',
         )
 
-    def validate_username(self, value):
-        if User.objects.filter(username=value).exists():
-            raise ValidationError('Этот ник уже зарегистрирован.')
-        return value
+    def validate_username(self, username):
+        if User.objects.filter(username=username).exists():
+            raise serializers.ValidationError(f'{username} - уже существует.')
+        return validate_username(username)
 
 
-class UserProfileSerializer(BaseUsernameUserSerializer):
+class UserProfileSerializer(UserSerializer):
 
-    class Meta(BaseUsernameUserSerializer.Meta):
-        model = User
+    class Meta(UserSerializer.Meta):
         read_only_fields = ('role',)
 
 

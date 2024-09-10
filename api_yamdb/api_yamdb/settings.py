@@ -1,6 +1,6 @@
+import string
 from datetime import timedelta
 from pathlib import Path
-from string import digits
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -131,6 +131,6 @@ STATICFILES_DIRS = ((BASE_DIR / 'static/'),)
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-VALID_CHARS_FOR_CONFIRMATION_CODE = digits
+VALID_CHARS_FOR_CONFIRMATION_CODE = string.digits
 MAX_LENGTH_CONFIRMATION_CODE = 8
 USER_PROFILE_URL = 'me'
